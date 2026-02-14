@@ -4,8 +4,6 @@
 
 Fairway Oracle is a data-driven platform that predicts PGA Tour tournament winners using machine learning models trained on 5–10 years of historical data. Built for research and entertainment purposes, it helps identify value bets by comparing model predictions against market odds.
 
-> **⚠️ Disclaimer:** This is not financial advice. Gambling involves risk. Use at your own discretion.
-
 ---
 
 ## Features
@@ -32,40 +30,6 @@ Fairway Oracle is a data-driven platform that predicts PGA Tour tournament winne
 | Deployment | Docker / Streamlit Cloud |
 
 ---
-
-## Quick Start
-
-### Prerequisites
-- Python 3.10+
-- Git
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/gmalbert/golf-predictions.git
-   cd golf-predictions
-   ```
-
-2. **Create a virtual environment:**
-   ```bash
-   python -m venv venv
-   # On Windows:
-   venv\Scripts\activate
-   # On macOS/Linux:
-   source venv/bin/activate
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Run the app:**
-   ```bash
-   streamlit run predictions.py
-   ```
-   Open http://localhost:8501 in your browser.
 
 ### Data Setup
 
@@ -158,36 +122,6 @@ See [docs/02_data_sources.md](docs/02_data_sources.md) for details and code samp
 
 ---
 
-## Contributing
-
-Contributions welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Setup
-
-- Use `black` for code formatting
-- Add tests for new features
-- Update docs for significant changes
-
----
-
 ## License
 
 This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
-
----
-
-## Contact
-
-- **Author:** [Your Name]
-- **GitHub:** [gmalbert](https://github.com/gmalbert)
-- **Project:** [golf-predictions](https://github.com/gmalbert/golf-predictions)
-
----
-
-*Built with ❤️ for golf analytics and responsible betting research.*
