@@ -73,16 +73,28 @@ The app starts with placeholder data. To populate real predictions:
 
 1. **Scrape historical data:**
    ```bash
-   python scrapers/espn_golf.py
-   python scrapers/wiki_winners.py
+   # Scrape ESPN tournament results (2022 season)
+   python scrapers/espn_golf.py --year 2022
+   
+   # Scrape multiple years
+   python scrapers/espn_golf.py --start 2018 --end 2024
    ```
 
-2. **Build features:**
+2. **Build player ID mapping:**
+   ```bash
+   # Creates stable player IDs from scraped data
+   python features/apply_player_ids.py
+   
+   # Validate player IDs
+   python features/apply_player_ids.py --validate
+   ```
+
+3. **Build features:**
    ```bash
    python features/build_features.py
    ```
 
-3. **Train a model:**
+4. **Train a model:**
    ```bash
    python models/baseline_logreg.py
    ```
@@ -98,11 +110,20 @@ golf-predictions/
 ├── predictions.py          # Main Streamlit app
 ├── requirements.txt        # Python dependencies
 ├── .gitignore             # Git ignore rules
-├── data_files/            # Scraped data (Parquet) and logo
-├── scrapers/              # Web scraping scripts
-├── features/              # Feature engineering
-├── models/                # ML model training
-├── docs/                  # Roadmap and guides
+├── data_files/            # Scraped data (Parquet), player registry, and logo
+├── scrapers/              # Web scraping scripts (ESPN, PGA Tour)
+│   ├── shared_utils.py    # Caching, user agent rotation
+│   ├── espn_golf.py       # ESPN tournament scraper
+│   └── README.md          # Scraper documentation
+├── features/              # Feature engineering and data prep
+│   ├── player_ids.py      # Player ID mapping system
+│   ├── apply_player_ids.py # Batch ID application
+│   └── README.md          # Feature engineering docs
+├── models/                # ML model training (coming soon)
+├── docs/                  # Roadmap and implementation guides
+│   ├── 01_roadmap_overview.md
+│   ├── 02_data_sources.md
+│   └── ...                # 7 total documentation files
 └── README.md              # This file
 ```
 
