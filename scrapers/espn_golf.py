@@ -13,6 +13,7 @@ import argparse
 import json
 import pandas as pd
 from pathlib import Path
+from datetime import datetime, timedelta
 from shared_utils import polite_get, DATA_DIR
 
 
@@ -51,12 +52,13 @@ def get_espn_schedule(year: int) -> list[dict]:
     return event_list
 
 
-def get_espn_leaderboard(event_id: str, from_event_data: dict = None) -> pd.DataFrame:
+def get_espn_leaderboard(event_id: str, event_date: str = None, from_event_data: dict = None) -> pd.DataFrame:
     """
     Get full leaderboard for an ESPN event.
     
     Args:
         event_id: ESPN event ID
+        event_date: Event start date in ISO format (YYYY-MM-DD) - REQUIRED for historical data
         from_event_data: If provided, extract from this event dict (from scoreboard)
                         instead of making a separate API call
     
@@ -67,8 +69,20 @@ def get_espn_leaderboard(event_id: str, from_event_data: dict = None) -> pd.Data
     if from_event_data:
         data = {"events": [from_event_data]}
     else:
-        # Try the standalone scoreboard endpoint with event filter
-        url = f"https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event={event_id}"
+        # Use date-based query for historical tournaments (event= parameter doesn't work)
+        # ESPN API requires date range format: YYYYMMDD-YYYYMMDD
+        if event_date:
+            from datetime import datetime, timedelta
+            # Parse the ISO date
+            start = datetime.fromisoformat(event_date.replace('Z', '+00:00'))
+            # Most tournaments are 4 days, use 7-day window to be safe
+            end = start + timedelta(days=7)
+            
+            date_range = f"{start.strftime('%Y%m%d')}-{end.strftime('%Y%m%d')}"
+            url = f"https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates={date_range}"
+        else:
+            # Fallback to event ID (only works for current tournament)
+            url = f"https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event={event_id}"
         
         try:
             resp = polite_get(url, use_cache=True)
@@ -87,26 +101,65 @@ def get_espn_leaderboard(event_id: str, from_event_data: dict = None) -> pd.Data
         for c in competitors:
             athlete = c.get("athlete", {})
             status = c.get("status", {})
-            position_obj = status.get("position", {})
+            position_obj = status.get("position") or c.get("position")
             score_obj = c.get("score", {})
-            
-            # Handle score being either dict or string
+
+            # Handle score being either dict or scalar
             if isinstance(score_obj, dict):
                 total_score = score_obj.get("displayValue")
                 total_strokes = score_obj.get("value")
             else:
-                total_score = str(score_obj) if score_obj else None
+                total_score = str(score_obj) if score_obj is not None else None
                 total_strokes = None
-            
+
             # Extract round scores
             rounds = c.get("linescores", [])
             round_scores = [r.get("displayValue") if isinstance(r, dict) else r for r in rounds]
-            
+
+            # Derive human display and a numeric position when available
+            pos_display = None
+            pos_numeric = None
+            try:
+                if isinstance(position_obj, dict):
+                    pos_display = position_obj.get("displayName") or position_obj.get("name")
+                    # Try several keys for a numeric value
+                    for k in ("rank", "ordinal", "displayValue"):
+                        v = position_obj.get(k)
+                        if isinstance(v, (int, float)):
+                            pos_numeric = int(v)
+                            break
+                        if isinstance(v, str) and v.strip().isdigit():
+                            pos_numeric = int(v.strip())
+                            break
+                    # fallback: extract leading digits from display text (e.g. 'T1')
+                    if pos_numeric is None and pos_display:
+                        import re
+                        m = re.search(r"(\d+)", str(pos_display))
+                        if m:
+                            pos_numeric = int(m.group(1))
+                else:
+                    # position_obj may be a plain string like 'T1' or None
+                    if position_obj:
+                        pos_display = str(position_obj)
+                        import re
+                        m = re.search(r"(\d+)", pos_display)
+                        if m:
+                            pos_numeric = int(m.group(1))
+
+                # final fallbacks
+                if pos_numeric is None:
+                    pos_numeric = c.get("sortOrder") or c.get("order")
+                    if isinstance(pos_numeric, (float,)):
+                        pos_numeric = int(pos_numeric)
+            except Exception:
+                pos_display = pos_display or None
+                pos_numeric = pos_numeric or None
+
             rows.append({
                 "player_id": athlete.get("id"),
                 "name": athlete.get("displayName"),
-                "position": position_obj.get("displayName", position_obj.get("name")) if isinstance(position_obj, dict) else str(position_obj),
-                "position_numeric": c.get("sortOrder"),  # Numeric position for sorting
+                "position": pos_display,
+                "position_numeric": pos_numeric,
                 "total_score": total_score,
                 "total_strokes": total_strokes,
                 "thru": status.get("thru"),
@@ -153,8 +206,8 @@ def scrape_espn_season(year: int, save: bool = True) -> pd.DataFrame:
     for i, event in enumerate(events, 1):
         print(f"\n[{i}/{len(events)}] {event['name']} ({event['id']})...")
         
-        # Try to get leaderboard - pass the event ID
-        df = get_espn_leaderboard(event["id"])
+        # Try to get leaderboard - use date-based query for historical data
+        df = get_espn_leaderboard(event["id"], event_date=event.get("date"))
         
         if not df.empty:
             # Add tournament metadata

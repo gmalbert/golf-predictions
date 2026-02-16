@@ -19,9 +19,11 @@ DATA_DIR = Path("data_files")
 
 
 def merge_parquets(out_path: Path, partition_dir: Path | None = None, dedupe: bool = True) -> pd.DataFrame:
-    files = sorted(DATA_DIR.glob("espn_pga_*.parquet"))
+    # Only match individual year files (espn_pga_YYYY.parquet), not consolidated outputs
+    files = [f for f in sorted(DATA_DIR.glob("espn_pga_*.parquet")) 
+             if f.stem.replace('espn_pga_', '').isdigit() and len(f.stem.replace('espn_pga_', '')) == 4]
     if not files:
-        raise FileNotFoundError("No espn_pga_*.parquet files found in data_files/")
+        raise FileNotFoundError("No espn_pga_YYYY.parquet files found in data_files/")
 
     frames = []
     for f in files:

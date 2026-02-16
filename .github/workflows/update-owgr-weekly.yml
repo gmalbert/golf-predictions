@@ -1,0 +1,93 @@
+name: Update OWGR Rankings Weekly
+
+on:
+  schedule:
+    # Run every Tuesday at 1 AM ET (6 AM UTC)
+    - cron: '0 6 * * 2'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  update-owgr:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for proper git operations
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Install Playwright browsers
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run linters & tests (quick)
+        run: |
+          pre-commit run --all-files || true
+          python -m pytest -q || true
+
+      - name: OWGR smoke checks
+        run: |
+          python tools/check_owgr_features.py || true
+
+      - name: Run weekly OWGR update
+        run: |
+          python tools/update_owgr_weekly.py
+        env:
+          PYTHONUNBUFFERED: 1
+      
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet data_files/*.parquet; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Commit and push if changes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # Get current week/year for commit message
+          WEEK=$(python -c "from datetime import datetime; print(datetime.now().isocalendar().week)")
+          YEAR=$(python -c "from datetime import datetime; print(datetime.now().isocalendar().year)")
+          
+          # Add only processed parquet files (PDFs are gitignored)
+          git add data_files/owgr_rankings.parquet
+          git add data_files/owgr_rankings_with_ids.parquet
+          git add data_files/espn_with_owgr_features.parquet
+          git add data_files/player_registry.parquet
+          
+          git commit -m "Update OWGR rankings - ${YEAR} Week ${WEEK}" || echo "No changes to commit"
+          git push
+      
+      - name: Create summary
+        if: always()
+        run: |
+          echo "## OWGR Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          python tools/github_summary.py >> $GITHUB_STEP_SUMMARY
+      
+      - name: Upload artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-logs
+          path: |
+            *.log
+            data_files/owgr_pdfs/*.pdf
+          retention-days: 7

@@ -129,8 +129,18 @@ dmypy.json
 .pyre/
 
 # Project specific
-data_files/*.parquet
-data_files/*.csv
+# Raw/temporary data (will be re-scraped)
+data_files/owgr_pdfs/*.pdf  # OWGR PDFs (large files, can be re-scraped)
+data_files/espn_pga_all/    # ESPN scraped HTML (large, can be re-scraped)
+data_files/cache/           # HTTP cache
+
+# Keep important processed data (commented out):
+# data_files/owgr_rankings.parquet
+# data_files/owgr_rankings_with_ids.parquet
+# data_files/espn_with_owgr_features.parquet
+# data_files/player_registry.parquet
+
+# Models and logs
 models/*.pkl
 models/*.joblib
 logs/

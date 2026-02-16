@@ -36,7 +36,32 @@ Editing guidelines for Copilot / contributors
 - If you modify behavior, update the related docs under the `docs/` folder.
 - When adding dependencies, update `requirements.txt` and explain why.
 - Layout / UI guidelines:
-- Avoid using `use_container_width`; use `width='stretch'` instead for Streamlit components and layout to ensure consistent cross-platform rendering.
+  - Streamlit defaults to full-width for tables; use `st.dataframe(df, hide_index=True)` for responsive tables.
+  - Avoid `use_container_width` and avoid setting `width='stretch'` or `width='content'` in code — CI enforces this.
+
+Debugging / data-workflow shortcuts
+-----------------------------------
+- Inspect ESPN API responses locally:
+  - `python scrapers/test_espn_api.py` (quick JSON smoke test)
+  - `python tools/inspect_espn_api.py` (detailed structure inspector)
+
+- Run OWGR weekly update locally:
+  - `python tools/update_owgr_weekly.py` (downloads PDF, parses, adds IDs, rebuilds OWGR features)
+
+- Check OWGR feature coverage:
+  - `python tools/check_owgr_features.py`
+
+- Run the Streamlit UI:
+  - `streamlit run predictions.py`
+
+Pre-commit & tests
+------------------
+- Run `pre-commit run --all-files` before committing
+- Run `python -m pytest -q` to execute the test suite
+
+If you're unsure
+---------------
+Open a short issue describing the desired change before implementing large refactors.
 
 Patch & commit workflow
 -----------------------

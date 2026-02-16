@@ -8,8 +8,8 @@ Fairway Oracle is a data-driven platform that predicts PGA Tour tournament winne
 
 ## Features
 
-- **Tournament Predictions**: Top-N winner predictions for upcoming PGA events
-- **Player Analytics**: Strokes Gained, form trends, course history
+- **Tournament Predictions**: Top-N winner predictions for upcoming PGA events with OWGR-enhanced accuracy
+- **Player Analytics**: Strokes Gained, form trends, course history, world ranking data
 - **Value Bet Detection**: Compare model probabilities vs. market odds
 - **Historical Backtesting**: Evaluate model performance over past tournaments
 - **Live Tracking**: Update predictions during tournament rounds
@@ -58,9 +58,15 @@ The app starts with placeholder data. To populate real predictions:
    python features/build_features.py
    ```
 
-4. **Train a model:**
+4. **Add OWGR features (optional but recommended):**
    ```bash
-   python models/baseline_logreg.py
+   # Download OWGR PDFs and build ranking features
+   python features/build_owgr_features.py
+   ```
+
+5. **Train a model:**
+   ```bash
+   python models/train_improved_model.py
    ```
 
 See the [roadmap docs](docs/) for detailed implementation steps.
@@ -82,6 +88,7 @@ golf-predictions/
 ├── features/              # Feature engineering and data prep
 │   ├── player_ids.py      # Player ID mapping system
 │   ├── apply_player_ids.py # Batch ID application
+│   ├── build_owgr_features.py # OWGR ranking integration
 │   └── README.md          # Feature engineering docs
 ├── models/                # ML model training (coming soon)
 ├── docs/                  # Roadmap and implementation guides
