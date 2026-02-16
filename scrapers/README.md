@@ -48,6 +48,51 @@ python scrapers/pga_tour_results.py --start 2020 --end 2024
 
 **Output:** `data_files/pga_tour_{year}.parquet`
 
+### 3. OWGR Archive (`owgr_scraper.py`) ✅ NEW
+
+Downloads historical Official World Golf Rankings from PDF archives (1986-present).
+
+**Coverage:** 1986–present (weekly rankings)  
+**Data quality:** ⭐⭐⭐⭐⭐ (official OWGR PDFs)  
+**Technology:** Playwright browser automation with network interception
+
+**Key Features:**
+- Automatic cookie banner handling
+- Network request interception to capture CDN URLs
+- Downloads both regular and federation rankings
+- Extracts actual filenames from responses
+
+```bash
+# View available PDFs for a year (no download)
+python scrapers/owgr_scraper.py --archive 2024
+
+# Download all PDFs for a year
+python scrapers/owgr_scraper.py --archive 2024 --download-pdfs data_files/owgr_pdfs
+
+# Show browser while scraping (for debugging)
+python scrapers/owgr_scraper.py --archive 2024 --show-browser --download-pdfs data_files/owgr_pdfs
+
+# Fetch current live rankings (requires Playwright)
+python scrapers/owgr_scraper.py --fetch --playwright --limit 300
+
+# Batch download multiple years (PowerShell)
+2020..2025 | ForEach-Object { 
+    python scrapers/owgr_scraper.py --archive $_ --download-pdfs data_files/owgr_pdfs 
+}
+```
+
+**Output:** 
+- PDFs: `data_files/owgr_pdfs/owgr{week}f{year}.pdf`
+- Federation rankings: `data_files/owgr_pdfs/Federation Ranking List {date} - Week {N}.pdf`
+
+**Next Steps:** PDF parsing with pdfplumber or tabula-py to extract ranking tables
+
+**Requirements:**
+```bash
+pip install playwright
+playwright install chromium
+```
+
 ## Testing
 
 Before scraping full datasets, test the scrapers:

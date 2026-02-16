@@ -4,6 +4,7 @@ Predict winners of upcoming PGA tournaments for betting insights.
 """
 
 import streamlit as st
+import pandas as pd
 from pathlib import Path
 
 # ── Page Config ──────────────────────────────────────────────────────────────
@@ -21,26 +22,39 @@ else:
     st.warning("Logo not found – expected at data_files/logo.png")
 
 # ── Header ───────────────────────────────────────────────────────────────────
-st.title("Fairway Oracle")
-st.markdown("### ⛳ PGA Tournament Winner Predictions for Smarter Betting")
-st.markdown("---")
+# st.title("Fairway Oracle")
+# st.markdown("### ⛳ PGA Tournament Winner Predictions for Smarter Betting")
+# st.markdown("---")
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 st.sidebar.header("Settings")
+
+# Load tournament list from actual data
+tournament_options = [
+    "Masters Tournament",
+    "PGA Championship", 
+    "U.S. Open",
+    "The Open",
+    "THE PLAYERS Championship",
+]
+
+# Try to load from actual data (prefer OWGR-enhanced version)
+try:
+    features_path = Path(__file__).parent / "data_files" / "espn_with_owgr_features.parquet"
+    if not features_path.exists():
+        features_path = Path(__file__).parent / "data_files" / "espn_player_tournament_features.parquet"
+    
+    if features_path.exists():
+        df_temp = pd.read_parquet(features_path)
+        actual_tournaments = sorted([t for t in df_temp['tournament'].unique() if pd.notna(t)])
+        if actual_tournaments:
+            tournament_options = actual_tournaments
+except:
+    pass
+
 tournament = st.sidebar.selectbox(
     "Select Tournament",
-    [
-        "The Masters",
-        "PGA Championship",
-        "U.S. Open",
-        "The Open Championship",
-        "The Players Championship",
-        "Arnold Palmer Invitational",
-        "Memorial Tournament",
-        "WM Phoenix Open",
-        "Genesis Invitational",
-        "RBC Heritage",
-    ],
+    tournament_options,
 )
 
 num_predictions = st.sidebar.slider(
@@ -52,21 +66,90 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader(f"🏌️ Predictions – {tournament}")
-    st.info(
-        "Model not yet trained. Connect historical data and train a model to "
-        "see predictions here. See the **docs/** roadmap for next steps."
-    )
+    
+    # Try to load model and make predictions
+    model_path = Path(__file__).parent / "models" / "saved_models" / "winner_predictor_v2.joblib"
+    
+    if model_path.exists():
+        try:
+            import joblib
+            from models.predict_tournament import predict_field
+            
+            # Load features for selected tournament (prefer OWGR-enhanced version)
+            features_path = Path(__file__).parent / "data_files" / "espn_with_owgr_features.parquet"
+            if not features_path.exists():
+                features_path = Path(__file__).parent / "data_files" / "espn_player_tournament_features.parquet"
+            
+            if features_path.exists():
+                df_all = pd.read_parquet(features_path)
+                
+                # Get most recent year for tournament
+                tournament_data = df_all[df_all['tournament'] == tournament]
+                if not tournament_data.empty:
+                    latest_year = tournament_data['year'].max()
+                    field = tournament_data[tournament_data['year'] == latest_year].copy()
+                    
+                    # Make predictions
+                    predictions = predict_field(field)
+                    
+                    # Build display columns dynamically (OWGR may be absent)
+                    display_cols = ['name', 'win_probability']
+                    col_renames = {'name': 'Player', 'win_probability': 'Win Prob'}
 
-    # Placeholder for future predictions table
-    # Example structure once the model is ready:
-    # predictions_df = model.predict(tournament)
-    # st.dataframe(predictions_df.head(num_predictions))
+                    if 'owgr_rank_current' in predictions.columns:
+                        display_cols.append('owgr_rank_current')
+                        col_renames['owgr_rank_current'] = 'OWGR Rank'
+
+                    if 'tournament_rank' in predictions.columns:
+                        display_cols.append('tournament_rank')
+                        col_renames['tournament_rank'] = 'Actual Finish'
+
+                    pred_display = predictions[display_cols].head(num_predictions).copy()
+                    pred_display = pred_display.rename(columns=col_renames)
+
+                    # Format columns
+                    pred_display['Win Prob'] = pred_display['Win Prob'].apply(lambda x: f"{x:.2%}")
+                    if 'OWGR Rank' in pred_display.columns:
+                        # Convert to int for non-null values, then to string, then fill NaN
+                        pred_display['OWGR Rank'] = pred_display['OWGR Rank'].apply(
+                            lambda x: str(int(x)) if pd.notna(x) else 'N/A'
+                        )
+
+                    st.dataframe(pred_display, hide_index=True)
+                    st.caption(f"Based on {tournament} {latest_year} field")
+
+                    # Informative note when OWGR features are missing
+                    if 'owgr_rank_current' not in predictions.columns:
+                        st.caption("OWGR features not present for this dataset — run `python features/build_owgr_features.py` to add world ranking data (optional).")
+                else:
+                    st.warning(f"No historical data available for {tournament}")
+            else:
+                st.warning("Feature data not found. Please build features first.")
+                
+        except Exception as e:
+            st.error(f"Error loading model predictions: {e}")
+            st.info("Run `python models/train_improved_model.py` to train the model.")
+    else:
+        st.info(
+            "Model not yet trained. Run `python models/train_improved_model.py` "
+            "to train the winner prediction model."
+        )
 
 with col2:
     st.subheader("📊 Model Confidence")
-    st.info(
-        "Confidence metrics will appear here once a model is trained."
-    )
+    
+    if model_path.exists():
+        # Show feature importance
+        importance_path = Path(__file__).parent / "models" / "saved_models" / "feature_importance_v2.csv"
+        if importance_path.exists():
+            feat_imp = pd.read_csv(importance_path).head(10)
+            feat_imp.columns = ['Feature', 'Importance']
+            st.dataframe(feat_imp, hide_index=True)
+            st.caption("Top 10 Most Important Features")
+    else:
+        st.info(
+            "Confidence metrics will appear here once a model is trained."
+        )
 
 # ── Upcoming Tournaments ────────────────────────────────────────────────────
 st.markdown("---")
@@ -86,15 +169,25 @@ st.markdown(
 st.markdown("---")
 st.subheader("📈 Player Stats & Features")
 
-# Load features dataset if available and show quick interactive preview
-import pandas as pd
-features_path = Path(__file__).parent / "data_files" / "espn_player_tournament_features.parquet"
+# Load features dataset (prefer OWGR-enhanced version)
+features_path = Path(__file__).parent / "data_files" / "espn_with_owgr_features.parquet"
+if not features_path.exists():
+    features_path = Path(__file__).parent / "data_files" / "espn_player_tournament_features.parquet"
 
 if features_path.exists():
     # Show feature dataset and interactive filters on the main page (not inside an expander)
     df_feats = pd.read_parquet(features_path)
+    
+    # Check if OWGR features are present
+    has_owgr = 'owgr_rank_current' in df_feats.columns
+    owgr_badge = "🌍 **WITH OWGR DATA**" if has_owgr else ""
+    
     years_list = sorted(df_feats['year'].astype(int).unique().tolist())
-    st.write(f"**Features:** {len(df_feats):,} rows · Years: {years_list} · Players: {df_feats['player_id'].nunique():,}")
+    st.write(f"**Features:** {len(df_feats):,} rows · Years: {years_list} · Players: {df_feats['player_id'].nunique():,} {owgr_badge}")
+    
+    if has_owgr:
+        owgr_coverage = (df_feats['owgr_rank_current'].notna().sum() / len(df_feats) * 100)
+        st.caption(f"OWGR Coverage: {owgr_coverage:.1f}% of records have world ranking data")
 
     # Filters
     fcol1, fcol2 = st.columns([1, 3])
@@ -108,7 +201,10 @@ if features_path.exists():
             tourn_opts = ["All"] + sorted(df_feats['tournament'].unique().tolist())
         sel_tourn = st.selectbox("Tournament", tourn_opts)
 
-        player_sample = sorted(df_feats['name'].unique().tolist())[:200]
+        player_sample = sorted(
+            df_feats['name'].dropna().astype(str).unique().tolist(),
+            key=lambda s: s.lower()
+        )[:200]
         sel_player = st.selectbox("Player (optional)", ["All"] + player_sample)
 
     with fcol2:
@@ -140,6 +236,7 @@ if features_path.exists():
             'year': 'Year',
             'numeric_total_score': 'Total Score (to Par)',
             'tournament_rank': 'Tournament Rank',
+            # Prior performance features
             'prior_count': 'Previous Tournaments',
             'prior_avg_score': 'Prior Avg Score',
             'prior_std_score': 'Prior Score StdDev',
@@ -156,13 +253,23 @@ if features_path.exists():
             'season_to_date_avg_score': 'Season-to-date Avg Score',
             'course_history_avg_score': 'Course Avg (Prior)',
             'career_best_rank': 'Career Best Rank',
-            'played_last_30d': 'Played (Last 30d)'
+            'played_last_30d': 'Played (Last 30d)',
+            # OWGR features
+            'owgr_rank_current': 'World Rank',
+            'owgr_rank_4w_ago': 'World Rank (4w ago)',
+            'owgr_rank_12w_ago': 'World Rank (12w ago)',
+            'owgr_rank_52w_ago': 'World Rank (52w ago)',
+            'owgr_points_current': 'OWGR Points',
+            'owgr_rank_change_4w': 'Rank Δ (4w)',
+            'owgr_rank_change_12w': 'Rank Δ (12w)',
+            'owgr_rank_change_52w': 'Rank Δ (52w)',
+            'owgr_data_staleness_days': 'OWGR Data Age (days)'
         }
         rename_map = {k: v for k, v in display_names.items() if k in view_display.columns}
         view_display = view_display.rename(columns=rename_map)
 
         # Show filtered table without index
-        st.dataframe(view_display.head(200), hide_index=True, use_container_width=True)
+        st.dataframe(view_display.head(200), hide_index=True)
 
     # Quick aggregate leaderboards (rename for display)
     st.markdown("**Quick leaderboards (all years)**")
@@ -177,7 +284,7 @@ if features_path.exists():
     except Exception:
         st.write("No form leaderboard available yet.")
 else:
-    st.info("Features dataset not found. Run `python features/build_features.py` to create `espn_player_tournament_features.parquet`.")
+    st.info("Features dataset not found. Run `python features/build_features.py` to create features, then optionally run `python features/build_owgr_features.py` to add OWGR data.")
 
 # ── Footer ───────────────────────────────────────────────────────────────────
 st.markdown("---")

@@ -1,0 +1,6 @@
+prior_avg_score
+prior_avg_score_5
+prior_avg_score_10
+tournaments_last_365d
+owgr_rank_current
+owgr_points_current
