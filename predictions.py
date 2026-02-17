@@ -76,6 +76,31 @@ prediction_mode = st.sidebar.radio(
     index=0
 )
 
+def get_dataframe_height(df, row_height=35, header_height=38, padding=2, max_height=600):
+    """
+    Calculate the optimal height for a Streamlit dataframe based on number of rows.
+    
+    Args:
+        df (pd.DataFrame): The dataframe to display
+        row_height (int): Height per row in pixels. Default: 35
+        header_height (int): Height of header row in pixels. Default: 38
+        padding (int): Extra padding in pixels. Default: 2
+        max_height (int): Maximum height cap in pixels. Default: 600 (None for no limit)
+    
+    Returns:
+        int: Calculated height in pixels
+    
+    Example:
+        height = get_dataframe_height(my_df)
+        st.dataframe(my_df, height=height)
+    """
+    num_rows = len(df)
+    calculated_height = (num_rows * row_height) + header_height + padding
+    
+    if max_height is not None:
+        return min(calculated_height, max_height)
+    return calculated_height
+
 # Mode-specific variables
 tournament = None
 is_upcoming = False
@@ -193,7 +218,7 @@ with col1:
                 # Format percentages
                 pred_display['Win Prob'] = pred_display['Win Prob'].apply(lambda x: f"{x*100:.2f}%")
                 
-                st.dataframe(pred_display, hide_index=True)
+                st.dataframe(pred_display, height=get_dataframe_height(pred_display), hide_index=True)
                 
                 # Show probability coverage
                 top_n_prob = predictions['win_probability'].head(num_predictions).sum()
@@ -255,7 +280,7 @@ with col1:
                                 lambda x: str(int(x)) if pd.notna(x) else 'N/A'
                             )
 
-                        st.dataframe(pred_display, hide_index=True)
+                        st.dataframe(pred_display, hide_index=True, height=get_dataframe_height(pred_display))
                         
                         # Show probability coverage
                         top_n_prob = predictions['win_probability'].head(num_predictions).sum()
@@ -289,7 +314,7 @@ with col2:
         if importance_path.exists():
             feat_imp = pd.read_csv(importance_path).head(10)
             feat_imp.columns = ['Feature', 'Importance']
-            st.dataframe(feat_imp, hide_index=True)
+            st.dataframe(feat_imp, hide_index=True, height=get_dataframe_height(feat_imp))
             st.caption("Top 10 Most Important Features")
     else:
         st.info(
@@ -373,7 +398,7 @@ with st.expander("View Detailed Model Performance Metrics", expanded=False):
             display_top_n = top_n_df.copy()
             display_top_n['Top-N Accuracy'] = display_top_n['Top-N Accuracy'].apply(lambda x: f"{x*100:.1f}%")
             
-            st.dataframe(display_top_n, hide_index=True)
+            st.dataframe(display_top_n, hide_index=True, height=get_dataframe_height(display_top_n))
             
             # Highlight key metrics
             top5_acc = top_n_df[top_n_df['Top N'] == 5]['Top-N Accuracy'].values[0]
@@ -399,7 +424,7 @@ with st.expander("View Detailed Model Performance Metrics", expanded=False):
             display_cal['Actual Win Rate'] = display_cal['Actual Win Rate'].apply(lambda x: f"{x*100:.2f}%")
             display_cal['Calibration Error'] = display_cal['Calibration Error'].apply(lambda x: f"{x*100:.2f}%")
             
-            st.dataframe(display_cal, hide_index=True)
+            st.dataframe(display_cal, hide_index=True, height=get_dataframe_height(display_cal))
             
             st.metric("Expected Calibration Error (ECE)", f"{ece:.4f}",
                      help="Lower is better; <0.1 indicates good calibration")
@@ -421,7 +446,7 @@ with st.expander("View Detailed Model Performance Metrics", expanded=False):
             display_importance['Importance (%)'] = display_importance['Importance (%)'].apply(lambda x: f"{x:.2f}%")
             display_importance['Cumulative (%)'] = display_importance['Cumulative (%)'].apply(lambda x: f"{x:.2f}%")
             
-            st.dataframe(display_importance, hide_index=True)
+            st.dataframe(display_importance, hide_index=True, height=get_dataframe_height(display_importance))
             
             st.caption("Higher percentage = more important for predictions")
     
@@ -443,7 +468,7 @@ try:
         display_upcoming['date'] = display_upcoming['date'].dt.strftime('%b %d, %Y')
         display_upcoming.columns = ['Date', 'Tournament']
         
-        st.dataframe(display_upcoming, hide_index=True)
+        st.dataframe(display_upcoming, hide_index=True, height=get_dataframe_height(display_upcoming))
         st.caption(f"Showing {len(display_upcoming)} upcoming tournaments in the next 90 days")
     else:
         st.info("No upcoming tournaments found in the next 90 days")
@@ -560,7 +585,7 @@ if features_path.exists():
         view_display = view_display.rename(columns=rename_map)
 
         # Show filtered table without index
-        st.dataframe(view_display.head(200), hide_index=True)
+        st.dataframe(view_display.head(200), hide_index=True, height=get_dataframe_height(view_display.head(200)))
 
     # Quick aggregate leaderboards (rename for display)
     st.markdown("**Quick leaderboards (all years)**")
@@ -571,12 +596,18 @@ if features_path.exists():
             'prior_avg_score': 'Prior Avg Score',
             'prior_count': 'Previous Tournaments'
         })
-        st.dataframe(top_form, hide_index=True)
+        st.dataframe(top_form, height=get_dataframe_height(top_form), hide_index=True)
     except Exception:
         st.write("No form leaderboard available yet.")
 else:
     st.info("Features dataset not found. Run `python features/build_features.py` to create features, then optionally run `python features/build_owgr_features.py` to add OWGR data.")
 
 # ── Footer ───────────────────────────────────────────────────────────────────
-st.markdown("---")
-st.caption("Fairway Oracle © 2026")
+
+# Include shared footer component if available
+try:
+    from footer import add_betting_oracle_footer
+    add_betting_oracle_footer()
+except Exception:
+    # If footer component is missing or fails, silently continue
+    pass
