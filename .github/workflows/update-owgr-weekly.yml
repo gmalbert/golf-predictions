@@ -80,7 +80,11 @@ jobs:
         run: |
           echo "## OWGR Update Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          python tools/github_summary.py >> $GITHUB_STEP_SUMMARY
+          if [ -f tools/github_summary.py ]; then
+            python tools/github_summary.py >> $GITHUB_STEP_SUMMARY
+          else
+            echo "*Summary script not found: tools/github_summary.py*" >> $GITHUB_STEP_SUMMARY
+          fi
       
       - name: Upload artifacts on failure
         if: failure()
