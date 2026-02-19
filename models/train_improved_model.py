@@ -29,10 +29,14 @@ def load_and_prepare_data():
     print("LOADING AND PREPARING DATA")
     print("="*70)
     
-    # Prefer OWGR-enhanced dataset when available
-    owgr_path = DATA_DIR / 'espn_with_owgr_features.parquet'
-    base_path = DATA_DIR / 'espn_player_tournament_features.parquet'
-    if owgr_path.exists():
+    # Prefer the richest available dataset
+    extended_path = DATA_DIR / 'espn_with_extended_features.parquet'
+    owgr_path     = DATA_DIR / 'espn_with_owgr_features.parquet'
+    base_path     = DATA_DIR / 'espn_player_tournament_features.parquet'
+    if extended_path.exists():
+        df = pd.read_parquet(extended_path)
+        print("[OK] Loaded extended features (SG + course context + weather)")
+    elif owgr_path.exists():
         df = pd.read_parquet(owgr_path)
         print("[OK] Loaded OWGR-enhanced features")
     else:
@@ -105,8 +109,58 @@ def select_features(df):
         'owgr_rank_change_52w',
         'owgr_data_staleness_days',
     ]
-    
-    all_features = historical_features + recent_form + owgr_features
+
+    # Tournament / course context (Tier 1 extended features — always available)
+    context_features = [
+        'is_major',                  # Major championship flag
+        'is_playoff',                # FedEx Cup playoff flag
+        'purse_tier',                # Prize money tier (1-5)
+        'course_type_enc',           # Encoded course type
+        'grass_type_enc',            # Encoded grass type
+        'field_strength',            # Mean OWGR rank in field
+        'field_size',                # Number of competitors
+    ]
+
+    # Strokes Gained — previous season (zero leakage, Tier 2)
+    sg_prev_features = [
+        'sg_total_prev_season',
+        'sg_off_tee_prev_season',
+        'sg_approach_prev_season',
+        'sg_around_green_prev_season',
+        'sg_putting_prev_season',
+        'driving_distance_prev_season',
+        'gir_pct_prev_season',
+        'scrambling_pct_prev_season',
+        'birdie_avg_prev_season',
+    ]
+
+    # Strokes Gained — current season (slight leakage for early events; use with caution)
+    sg_curr_features = [
+        'sg_total_season',
+        'sg_off_tee_season',
+        'sg_approach_season',
+        'sg_around_green_season',
+        'sg_putting_season',
+        'driving_distance_season',
+        'gir_pct_season',
+    ]
+
+    # Weather features (Tier 3)
+    weather_features = [
+        'wind_speed_avg',
+        'temperature_avg',
+        'precipitation_sum',
+    ]
+
+    all_features = (
+        historical_features
+        + recent_form
+        + owgr_features
+        + context_features
+        + sg_prev_features
+        + sg_curr_features
+        + weather_features
+    )
     
     # Check which features exist
     available = [f for f in all_features if f in df.columns]
@@ -118,9 +172,13 @@ def select_features(df):
     
     print(f"\n[OK] Using {len(available)} features")
     print(f"\nFeature categories:")
-    print(f"  Historical: {sum(1 for f in available if f in historical_features)}")
-    print(f"  Recent form: {sum(1 for f in available if f in recent_form)}")
-    print(f"  OWGR: {sum(1 for f in available if f in owgr_features)}")
+    print(f"  Historical:      {sum(1 for f in available if f in historical_features)}")
+    print(f"  Recent form:     {sum(1 for f in available if f in recent_form)}")
+    print(f"  OWGR:            {sum(1 for f in available if f in owgr_features)}")
+    print(f"  Course context:  {sum(1 for f in available if f in context_features)}")
+    print(f"  SG prev season:  {sum(1 for f in available if f in sg_prev_features)}")
+    print(f"  SG curr season:  {sum(1 for f in available if f in sg_curr_features)}")
+    print(f"  Weather:         {sum(1 for f in available if f in weather_features)}")
     
     if missing:
         print(f"\n  Note: {len(missing)} features not available in data")
@@ -276,13 +334,17 @@ def save_model(model, feature_cols, importance_df):
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
+    # Determine version based on which features are present
+    has_extended = any(f for f in feature_cols if 'sg_' in f or 'is_major' in f)
+    version = 'v3' if has_extended else 'v2'
+
     # Save model (joblib for sklearn wrapper + XGBoost-native for compatibility)
-    model_path = MODEL_DIR / 'winner_predictor_v2.joblib'
+    model_path = MODEL_DIR / f'winner_predictor_{version}.joblib'
     joblib.dump(model, model_path)
     print(f"\n[OK] Model (joblib) saved: {model_path}")
 
     # Also save native XGBoost model to avoid pickle/version warnings
-    xgb_native_path = MODEL_DIR / 'winner_predictor_v2.json'
+    xgb_native_path = MODEL_DIR / f'winner_predictor_{version}.json'
     try:
         # Use the Booster API to save a version-independent representation
         booster = model.get_booster()
@@ -291,13 +353,22 @@ def save_model(model, feature_cols, importance_df):
     except Exception as e:
         print(f"[WARN] Could not save native XGBoost model: {e}")
 
+    # Always keep v2 paths as well for backwards compatibility with predictions.py
+    if version == 'v3':
+        import shutil
+        shutil.copy(model_path, MODEL_DIR / 'winner_predictor_v2.joblib')
+        shutil.copy(xgb_native_path, MODEL_DIR / 'winner_predictor_v2.json')
+        print(f"[OK] Also copied as winner_predictor_v2 for backwards compat")
+
     # Save feature list
-    features_path = MODEL_DIR / 'model_features_v2.txt'
+    features_path = MODEL_DIR / f'model_features_{version}.txt'
     features_path.write_text('\n'.join(feature_cols))
+    # Always update v2 path so predictions.py keeps working
+    (MODEL_DIR / 'model_features_v2.txt').write_text('\n'.join(feature_cols))
     print(f"[OK] Features saved: {features_path}")
 
     # Save importance
-    importance_path = MODEL_DIR / 'feature_importance_v2.csv'
+    importance_path = MODEL_DIR / f'feature_importance_{version}.csv'
     importance_df.to_csv(importance_path, index=False)
     print(f"[OK] Importance saved: {importance_path}")
 

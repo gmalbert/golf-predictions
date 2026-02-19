@@ -16,10 +16,14 @@ print("="*70)
 print("TESTING MODEL ON 2025 TOURNAMENTS")
 print("="*70)
 
-# Load data (prefer OWGR-enhanced dataset if available)
+# Load data (prefer extended dataset if available, then OWGR-enhanced)
+ext_path = DATA_DIR / 'espn_with_extended_features.parquet'
 owgr_path = DATA_DIR / 'espn_with_owgr_features.parquet'
 base_path = DATA_DIR / 'espn_player_tournament_features.parquet'
-if owgr_path.exists():
+if ext_path.exists():
+    df = pd.read_parquet(ext_path)
+    print("[OK] Using extended features for testing (SG + weather)")
+elif owgr_path.exists():
     df = pd.read_parquet(owgr_path)
     print("[OK] Using OWGR-enhanced features for testing")
 else:

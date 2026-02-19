@@ -72,7 +72,7 @@ def polite_get(
     
     # Check cache first
     if use_cache and not force_refresh and cache_path.exists():
-        print(f"✓ Using cached: {url}")
+        print(f"[cache] Using cached: {url}")
         # Create a mock response from cache
         response = requests.Response()
         response.status_code = 200
@@ -88,14 +88,14 @@ def polite_get(
     if "headers" in kwargs:
         headers.update(kwargs.pop("headers"))
     
-    print(f"⬇ Downloading: {url}")
+    print(f"[fetch] Downloading: {url}")
     response = requests.get(url, headers=headers, timeout=30, **kwargs)
     response.raise_for_status()
     
     # Save to cache
     if use_cache:
         cache_path.write_bytes(response.content)
-        print(f"💾 Cached to: {cache_path.name}")
+        print(f"[cache] Saved to: {cache_path.name}")
     
     return response
 
@@ -107,7 +107,7 @@ def clear_cache():
         for cache_file in CACHE_DIR.glob("*.html"):
             cache_file.unlink()
             count += 1
-        print(f"🗑️  Cleared {count} cached files")
+        print(f"[cache] Cleared {count} cached files")
     else:
         print("No cache to clear")
 
