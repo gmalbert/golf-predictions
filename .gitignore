@@ -156,4 +156,4 @@ geckodriver/
 .DS_Store
 Thumbs.db
 
-data_files/cache/*
+data_files/cache/
