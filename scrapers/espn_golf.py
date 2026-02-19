@@ -88,7 +88,7 @@ def get_espn_leaderboard(event_id: str, event_date: str = None, from_event_data:
             resp = polite_get(url, use_cache=True)
             data = resp.json()
         except Exception as e:
-            print(f"  ⚠️  Cannot fetch leaderboard: {e}")
+            print(f"  [WARN] Cannot fetch leaderboard: {e}")
             return pd.DataFrame()
     
     rows = []
@@ -168,14 +168,14 @@ def get_espn_leaderboard(event_id: str, event_date: str = None, from_event_data:
             })
     
     except (KeyError, IndexError, TypeError) as e:
-        print(f"  ⚠️  Warning parsing leaderboard: {e}")
+        print(f"  [WARN] Warning parsing leaderboard: {e}")
     
     df = pd.DataFrame(rows)
     
     if not df.empty:
-        print(f"  ✓ Parsed {len(df)} players")
+        print(f"  [OK] Parsed {len(df)} players")
     else:
-        print(f"  ✗ No players found")
+        print(f"  [--] No players found")
     
     return df
 
@@ -218,10 +218,10 @@ def scrape_espn_season(year: int, save: bool = True) -> pd.DataFrame:
             df["season"] = event.get("season", year)
             all_frames.append(df)
         else:
-            print(f"  ⚠️  Skipping - no leaderboard data available")
+            print(f"  [--] Skipping - no leaderboard data available")
     
     if not all_frames:
-        print(f"\n⚠️  No data scraped for {year}")
+        print(f"\n[WARN] No data scraped for {year}")
         return pd.DataFrame()
     
     combined = pd.concat(all_frames, ignore_index=True)
@@ -236,7 +236,7 @@ def scrape_espn_season(year: int, save: bool = True) -> pd.DataFrame:
     if save:
         out_path = DATA_DIR / f"espn_pga_{year}.parquet"
         combined.to_parquet(out_path, index=False)
-        print(f"💾 Saved to: {out_path}")
+        print(f"[OK] Saved to: {out_path}")
     
     return combined
 
@@ -247,7 +247,7 @@ def scrape_multiple_seasons(start_year: int, end_year: int):
         try:
             scrape_espn_season(year, save=True)
         except Exception as e:
-            print(f"❌ Error scraping {year}: {e}")
+            print(f"[ERR] Error scraping {year}: {e}")
             continue
 
 
@@ -285,4 +285,4 @@ if __name__ == "__main__":
         # Range mode
         scrape_multiple_seasons(args.start, args.end)
     
-    print("\n✅ Done!")
+    print("\n[OK] Done!")

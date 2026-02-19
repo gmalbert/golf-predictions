@@ -55,4 +55,30 @@
 
 ---
 
-*Last updated: 2026-02-13*
+## Recommended next steps (short & medium term)
+
+> Practical action items to complete after Tier‑2 (PGA stats) and Tier‑3 (weather) integration.
+
+1. ✅ **Immediate / High priority (0–2 weeks)**
+   - Update CI & tests to prefer the extended dataset (`data_files/espn_with_extended_features.parquet`) or make tests resilient to missing extended columns — files: `models/test_model_v2.py`, CI workflows.  
+   - Add unit tests for SG merges and weather enrichment (validate joins, percent parsing, and coverage) — files: `scrapers/pga_stats.py`, `features/build_extended_features.py`.  
+   - Open a short PR that documents the new datasets and model v3 artifacts (`models/saved_models/*`).
+
+2. 🔧 **Medium priority (2–6 weeks)**
+   - Implement canonical player‑ID mapping / stronger name normalization to raise SG‑join coverage — files: `features/player_ids.py`, `features/apply_player_ids.py`, `player_registry.parquet`.  
+   - Add remaining features from `docs/04_models_and_features.md` (e.g. `course_length_fit`, `course_history_sg`, `momentum_score`) and corresponding tests.  
+   - Wire model **v3** into the Streamlit UI and prediction endpoints (`predictions.py`) and update user docs.
+
+3. 📅 **Longer term / backlog**
+   - Schedule automated scrapes (PGA stats + weather) via GitHub Actions/cron and add monitoring/alerts.  
+   - Expand course-level metadata (altitude, grass-specific effects) and run ablation experiments.  
+   - Evaluate premium data integrations (DataGolf) as optional uplift sources.
+
+### Quick wins (do today)
+- Ensure `models/test_model_v2.py` prefers the extended parquet (done); push CI change.  
+- Add 2–3 unit tests covering SG parsing and name‑based merges.  
+- Create an issue for canonical player‑id mapping and assign owner/ETA.
+
+---
+
+*Last updated: 2026-02-17*

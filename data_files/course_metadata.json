@@ -1,0 +1,436 @@
+{
+  "_comment": "PGA Tour course metadata: coordinates, type, grass, and is_major flag per tournament name.",
+  "_schema": {
+    "lat": "Latitude of course",
+    "lon": "Longitude of course",
+    "course_type": "links | parkland | desert | resort | stadium | mountain",
+    "grass_type": "bermuda | bentgrass | poa_annua | rye | zoysia | mixed",
+    "is_major": "1 = major championship, 0 = regular event",
+    "is_playoff": "1 = FedEx Cup playoff event, 0 = regular event",
+    "purse_tier": "1=<$5M, 2=$5-8M, 3=$8-12M, 4=$12-20M, 5=>$20M"
+  },
+
+  "masters tournament": {
+    "lat": 33.5032, "lon": -82.0197,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 1, "is_playoff": 0, "purse_tier": 5
+  },
+  "the masters": {
+    "lat": 33.5032, "lon": -82.0197,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 1, "is_playoff": 0, "purse_tier": 5
+  },
+  "masters": {
+    "lat": 33.5032, "lon": -82.0197,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 1, "is_playoff": 0, "purse_tier": 5
+  },
+  "u.s. open": {
+    "lat": 40.6333, "lon": -74.3580,
+    "course_type": "links", "grass_type": "bentgrass",
+    "is_major": 1, "is_playoff": 0, "purse_tier": 5
+  },
+  "the open championship": {
+    "lat": 56.3402, "lon": -2.8049,
+    "course_type": "links", "grass_type": "rye",
+    "is_major": 1, "is_playoff": 0, "purse_tier": 5
+  },
+  "open championship": {
+    "lat": 56.3402, "lon": -2.8049,
+    "course_type": "links", "grass_type": "rye",
+    "is_major": 1, "is_playoff": 0, "purse_tier": 5
+  },
+  "the open": {
+    "lat": 56.3402, "lon": -2.8049,
+    "course_type": "links", "grass_type": "rye",
+    "is_major": 1, "is_playoff": 0, "purse_tier": 5
+  },
+  "pga championship": {
+    "lat": 38.2004, "lon": -85.7512,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 1, "is_playoff": 0, "purse_tier": 5
+  },
+
+  "the players championship": {
+    "lat": 30.0956, "lon": -81.3929,
+    "course_type": "stadium", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 5
+  },
+  "players championship": {
+    "lat": 30.0956, "lon": -81.3929,
+    "course_type": "stadium", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 5
+  },
+
+  "tour championship": {
+    "lat": 33.8313, "lon": -84.3881,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 1, "purse_tier": 5
+  },
+  "the tour championship": {
+    "lat": 33.8313, "lon": -84.3881,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 1, "purse_tier": 5
+  },
+  "bmw championship": {
+    "lat": 41.8823, "lon": -87.6317,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 1, "purse_tier": 5
+  },
+  "fedex st. jude championship": {
+    "lat": 35.1492, "lon": -90.0490,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 1, "purse_tier": 5
+  },
+  "fedex st. jude classic": {
+    "lat": 35.1492, "lon": -90.0490,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "wgc-fedex st. jude invitational": {
+    "lat": 35.1492, "lon": -90.0490,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "northern trust": {
+    "lat": 40.7128, "lon": -74.0060,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 1, "purse_tier": 5
+  },
+  "the northern trust": {
+    "lat": 40.7128, "lon": -74.0060,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 1, "purse_tier": 5
+  },
+
+  "genesis invitational": {
+    "lat": 34.0456, "lon": -118.5659,
+    "course_type": "parkland", "grass_type": "poa_annua",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 5
+  },
+  "genesis open": {
+    "lat": 34.0456, "lon": -118.5659,
+    "course_type": "parkland", "grass_type": "poa_annua",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "at&t pebble beach pro-am": {
+    "lat": 36.5688, "lon": -121.9500,
+    "course_type": "links", "grass_type": "poa_annua",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "at&t pebble beach": {
+    "lat": 36.5688, "lon": -121.9500,
+    "course_type": "links", "grass_type": "poa_annua",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "the american express": {
+    "lat": 33.8729, "lon": -116.3077,
+    "course_type": "desert", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "desert classic": {
+    "lat": 33.8729, "lon": -116.3077,
+    "course_type": "desert", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "sony open in hawaii": {
+    "lat": 21.3892, "lon": -157.9511,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "sony open": {
+    "lat": 21.3892, "lon": -157.9511,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "arnold palmer invitational presented by mastercard": {
+    "lat": 28.4789, "lon": -81.5078,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 5
+  },
+  "arnold palmer invitational": {
+    "lat": 28.4789, "lon": -81.5078,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 5
+  },
+  "the honda classic": {
+    "lat": 26.8337, "lon": -80.0888,
+    "course_type": "stadium", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "honda classic": {
+    "lat": 26.8337, "lon": -80.0888,
+    "course_type": "stadium", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "valspar championship": {
+    "lat": 28.2139, "lon": -82.7132,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "waste management phoenix open": {
+    "lat": 33.4539, "lon": -111.9289,
+    "course_type": "desert", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "wmphoenix open": {
+    "lat": 33.4539, "lon": -111.9289,
+    "course_type": "desert", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "phoenix open": {
+    "lat": 33.4539, "lon": -111.9289,
+    "course_type": "desert", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "farmers insurance open": {
+    "lat": 32.8839, "lon": -117.2476,
+    "course_type": "parkland", "grass_type": "poa_annua",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "sentry tournament of champions": {
+    "lat": 20.8933, "lon": -156.4305,
+    "course_type": "resort", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "sentry": {
+    "lat": 20.8933, "lon": -156.4305,
+    "course_type": "resort", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "tournament of champions": {
+    "lat": 20.8933, "lon": -156.4305,
+    "course_type": "resort", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "memorial tournament presented by workday": {
+    "lat": 40.0781, "lon": -83.1449,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 5
+  },
+  "memorial tournament": {
+    "lat": 40.0781, "lon": -83.1449,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 5
+  },
+  "rbc canadian open": {
+    "lat": 43.8413, "lon": -79.5352,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "canadian open": {
+    "lat": 43.8413, "lon": -79.5352,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "rbc heritage": {
+    "lat": 32.1385, "lon": -80.8008,
+    "course_type": "links", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "wells fargo championship": {
+    "lat": 35.5104, "lon": -80.8516,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "the cj cup byron nelson": {
+    "lat": 32.8484, "lon": -96.9917,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "at&t byron nelson": {
+    "lat": 32.8484, "lon": -96.9917,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "charles schwab challenge": {
+    "lat": 32.7508, "lon": -97.3338,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "the charles schwab challenge": {
+    "lat": 32.7508, "lon": -97.3338,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "rocket mortgage classic": {
+    "lat": 42.3576, "lon": -83.0740,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "john deere classic": {
+    "lat": 41.4623, "lon": -90.5235,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "travelers championship": {
+    "lat": 41.9287, "lon": -72.6960,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "the travelers championship": {
+    "lat": 41.9287, "lon": -72.6960,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "wyndham championship": {
+    "lat": 36.0686, "lon": -79.8073,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "sanderson farms championship": {
+    "lat": 32.3117, "lon": -90.1873,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "shriners children's open": {
+    "lat": 36.0755, "lon": -115.1522,
+    "course_type": "desert", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "shriners hospitals for children open": {
+    "lat": 36.0755, "lon": -115.1522,
+    "course_type": "desert", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "zozo championship": {
+    "lat": 35.7090, "lon": 139.7320,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "the zozo championship": {
+    "lat": 35.7090, "lon": 139.7320,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "world wide technology championship at mayakoba": {
+    "lat": 20.6296, "lon": -87.0601,
+    "course_type": "resort", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "mayakoba golf classic": {
+    "lat": 20.6296, "lon": -87.0601,
+    "course_type": "resort", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "the rsm classic": {
+    "lat": 31.5032, "lon": -81.3945,
+    "course_type": "resort", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "rsm classic": {
+    "lat": 31.5032, "lon": -81.3945,
+    "course_type": "resort", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "the american express championship": {
+    "lat": 33.8729, "lon": -116.3077,
+    "course_type": "desert", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "hero world challenge": {
+    "lat": 26.9342, "lon": -77.3860,
+    "course_type": "resort", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "wgc-dell technologies match play": {
+    "lat": 30.3374, "lon": -97.7581,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "dell technologies match play": {
+    "lat": 30.3374, "lon": -97.7581,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "wgc-workday championship": {
+    "lat": 28.4789, "lon": -81.5078,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "wgc-mexico championship": {
+    "lat": 19.3741, "lon": -99.2520,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "wgc-hsbc champions": {
+    "lat": 31.1667, "lon": 121.6167,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "3m open": {
+    "lat": 45.0302, "lon": -93.2069,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "the 3m open": {
+    "lat": 45.0302, "lon": -93.2069,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "cognizant classic in the palm beaches": {
+    "lat": 26.8337, "lon": -80.0888,
+    "course_type": "stadium", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "puerto rico open": {
+    "lat": 18.4655, "lon": -66.1057,
+    "course_type": "resort", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 1
+  },
+  "valero texas open": {
+    "lat": 29.5885, "lon": -98.6200,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "texas open": {
+    "lat": 29.5885, "lon": -98.6200,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "corales puntacana championship": {
+    "lat": 18.5601, "lon": -68.4032,
+    "course_type": "resort", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "korn ferry tour championship": {
+    "lat": 30.3374, "lon": -97.7581,
+    "course_type": "parkland", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "butterfield bermuda championship": {
+    "lat": 32.3010, "lon": -64.7825,
+    "course_type": "links", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "bermuda championship": {
+    "lat": 32.3010, "lon": -64.7825,
+    "course_type": "links", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "nitto atp finals": {
+    "lat": 51.5074, "lon": -0.1278,
+    "course_type": "parkland", "grass_type": "bentgrass",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "ace group classic": {
+    "lat": 26.5370, "lon": -81.8731,
+    "course_type": "resort", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 2
+  },
+  "truist championship": {
+    "lat": 26.8337, "lon": -80.0888,
+    "course_type": "stadium", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 4
+  },
+  "cj cup": {
+    "lat": 36.1627, "lon": -115.1561,
+    "course_type": "desert", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  },
+  "the cj cup": {
+    "lat": 36.1627, "lon": -115.1561,
+    "course_type": "desert", "grass_type": "bermuda",
+    "is_major": 0, "is_playoff": 0, "purse_tier": 3
+  }
+}

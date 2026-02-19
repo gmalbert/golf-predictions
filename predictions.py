@@ -9,6 +9,121 @@ from pathlib import Path
 from utils.tournament_display import format_tournament_display, tournament_sort_key
 
 
+# ── Tournament name → odds event_label mapping ───────────────────────────────
+# Keys are substrings that appear in ESPN tournament names (case-insensitive)
+TOURNAMENT_TO_EVENT_LABEL = {
+    "masters":        "masters",
+    "pga championship": "pga_champ",
+    "u.s. open":      "us_open",
+    "us open":        "us_open",
+    "the open":       "open",
+    "open championship": "open",
+}
+
+
+def resolve_event_label(tournament_name: str) -> str | None:
+    """Return the odds event_label for a tournament name, or None if not a major."""
+    if not tournament_name:
+        return None
+    name_lower = tournament_name.lower()
+    for key, label in TOURNAMENT_TO_EVENT_LABEL.items():
+        if key in name_lower:
+            return label
+    return None
+
+
+def enrich_predictions_with_odds(
+    predictions: pd.DataFrame,
+    tournament_name: str,
+) -> pd.DataFrame:
+    """
+    Merge consensus market odds into a predictions DataFrame and add:
+      - DK Odds (american)
+      - Best Odds / Best Book
+      - Mkt NoVig%
+      - Edge (pp)   (model_win% - market novig%)
+      - Value Bet   ("YES +Xpp" / "no (-Xpp)")
+
+    Supports both schema versions:
+      - New (RotoWire): columns include player_name, event_name, event_id
+      - Old (Odds API): columns include player, event_label
+
+    Matches records by tournament name substring (case-insensitive).
+    Returns the enriched DataFrame.
+    """
+    odds_path = Path(__file__).parent / "data_files" / "odds_consensus_latest.parquet"
+    if not odds_path.exists():
+        return predictions
+
+    try:
+        odds = pd.read_parquet(odds_path)
+        cols = set(odds.columns)
+
+        # ── Normalise to common schema ──────────────────────────────────────
+        # New RotoWire schema
+        if "player_name" in cols and "event_name" in cols:
+            # Filter to matching event by tournament name substring
+            t_lower = (tournament_name or "").lower()
+            mask = odds["event_name"].str.lower().apply(
+                lambda en: any(part in en for part in t_lower.split() if len(part) > 3)
+                or any(part in t_lower for part in en.lower().split() if len(part) > 3)
+            )
+            odds_filtered = odds[mask].copy()
+            if odds_filtered.empty:
+                # No event match — use whatever is in the file (single-event file)
+                odds_filtered = odds.copy()
+            odds_filtered = odds_filtered.rename(columns={"player_name": "player"})
+
+        # Old Odds API schema
+        elif "player" in cols and "event_label" in cols:
+            event_label = resolve_event_label(tournament_name)
+            if not event_label:
+                return predictions
+            odds_filtered = odds[odds["event_label"] == event_label].copy()
+            if odds_filtered.empty:
+                return predictions
+        else:
+            return predictions
+
+        if odds_filtered.empty:
+            return predictions
+
+        odds_filtered["player_key"] = odds_filtered["player"].str.strip().str.lower()
+
+        # Ensure needed columns exist
+        for col in ["dk_odds", "best_odds", "best_book", "avg_novig_prob"]:
+            if col not in odds_filtered.columns:
+                odds_filtered[col] = None
+
+        preds = predictions.copy()
+        preds["player_key"] = preds["name"].str.strip().str.lower()
+
+        merge_cols = ["player_key", "dk_odds", "best_odds", "best_book", "avg_novig_prob"]
+        merge_cols = [c for c in merge_cols if c in odds_filtered.columns]
+
+        merged = preds.merge(
+            odds_filtered[merge_cols],
+            on="player_key",
+            how="left",
+        ).drop(columns=["player_key"])
+
+        merged["edge_pp"] = (
+            merged["win_probability"] - merged["avg_novig_prob"]
+        ) * 100
+
+        def value_label(row):
+            if pd.isna(row.get("avg_novig_prob")):
+                return "–"
+            if row["edge_pp"] > 0:
+                return f"YES +{row['edge_pp']:.1f}pp"
+            return f"no ({row['edge_pp']:.1f}pp)"
+
+        merged["Value Bet"] = merged.apply(value_label, axis=1)
+        return merged
+    except Exception:
+        return predictions
+
+
 # ── Helper Functions ─────────────────────────────────────────────────────────
 def get_tournament_options(features_path: Path | None = None):
     """Return (options_list, mapping) for the tournament selectbox.
@@ -24,11 +139,16 @@ def get_tournament_options(features_path: Path | None = None):
     ]
 
     if features_path is None:
-        features_path = Path(__file__).parent / "data_files" / "espn_with_owgr_features.parquet"
-        if not features_path.exists():
-            features_path = Path(__file__).parent / "data_files" / "espn_player_tournament_features.parquet"
+        for candidate in [
+            Path(__file__).parent / "data_files" / "espn_with_extended_features.parquet",
+            Path(__file__).parent / "data_files" / "espn_with_owgr_features.parquet",
+            Path(__file__).parent / "data_files" / "espn_player_tournament_features.parquet",
+        ]:
+            if candidate.exists():
+                features_path = candidate
+                break
 
-    if not features_path.exists():
+    if features_path is None or not features_path.exists():
         return defaults, {}
 
     df_temp = pd.read_parquet(features_path)
@@ -116,13 +236,14 @@ if prediction_mode == "🔮 Upcoming Tournaments":
             upcoming_df = get_upcoming_tournaments(days_ahead=90)
         
         if len(upcoming_df) > 0:
-            # Format as selectbox options
+            # Format as selectbox options — tag majors with an odds indicator
             upcoming_options = []
             upcoming_mapping = {}
             
             for _, row in upcoming_df.iterrows():
                 date_str = row['date'].strftime('%b %d, %Y')
-                display = f"{row['name']} - {date_str}"
+                has_odds_tag = " 💰" if resolve_event_label(row['name']) else ""
+                display = f"{row['name']}{has_odds_tag} - {date_str}"
                 upcoming_options.append(display)
                 upcoming_mapping[display] = {
                     'name': row['name'],
@@ -134,6 +255,7 @@ if prediction_mode == "🔮 Upcoming Tournaments":
                 "Select Upcoming Tournament",
                 upcoming_options,
             )
+            st.sidebar.caption("💰 = DraftKings odds available")
             
             # Extract selected tournament info
             selected_info = upcoming_mapping[selected_upcoming]
@@ -190,136 +312,242 @@ num_predictions = st.sidebar.slider(
 # Define model path (needed for both prediction and confidence display)
 model_path = Path(__file__).parent / "models" / "saved_models" / "winner_predictor_v2.joblib"
 
-col1, col2 = st.columns(2)
+st.subheader(f"🏌️ Predictions – {tournament_display}")
 
-with col1:
-    st.subheader(f"🏌️ Predictions – {tournament_display}")
-    
-    if is_upcoming:
-        # Handle upcoming tournament predictions
-        try:
-            from models.predict_upcoming import predict_upcoming_tournament
-            
-            with st.spinner("Building predictions for upcoming tournament..."):
-                predictions = predict_upcoming_tournament(tournament, tournament_id, tournament_date)
-            
-            if not predictions.empty:
-                # Build display for upcoming predictions
-                display_cols = ['name', 'win_probability']
-                col_renames = {'name': 'Player', 'win_probability': 'Win Prob'}
-                
-                if 'owgr_rank_current' in predictions.columns:
-                    display_cols.append('owgr_rank_current')
-                    col_renames['owgr_rank_current'] = 'OWGR Rank'
-                
-                pred_display = predictions[display_cols].head(num_predictions).copy()
-                pred_display = pred_display.rename(columns=col_renames)
-                
-                # Format percentages
-                pred_display['Win Prob'] = pred_display['Win Prob'].apply(lambda x: f"{x*100:.2f}%")
-                
-                st.dataframe(pred_display, height=get_dataframe_height(pred_display), hide_index=True)
-                
-                # Show probability coverage
-                top_n_prob = predictions['win_probability'].head(num_predictions).sum()
-                total_field = len(predictions)
-                st.caption(f"Showing top {num_predictions} of {total_field} players (covering {top_n_prob*100:.1f}% of total win probability)")
+if is_upcoming:
+    # Handle upcoming tournament predictions
+    try:
+        from models.predict_upcoming import predict_upcoming_tournament
+        
+        with st.spinner("Building predictions for upcoming tournament..."):
+            predictions = predict_upcoming_tournament(tournament, tournament_id, tournament_date)
+        
+        if not predictions.empty:
+            # Try to enrich with market odds (works for any PGA Tour event via RotoWire)
+            predictions = enrich_predictions_with_odds(predictions, tournament)
+
+            has_odds = "avg_novig_prob" in predictions.columns and predictions["avg_novig_prob"].notna().any()
+            has_dk = has_odds and "dk_odds" in predictions.columns and predictions["dk_odds"].notna().any()
+
+            # ── Refresh Odds button ────────────────────────────────────
+            if not has_odds:
+                refresh_col, info_col = st.columns([1, 3])
+                with refresh_col:
+                    if st.button("Refresh Odds", key="refresh_odds_upcoming"):
+                        try:
+                            import subprocess, sys
+                            with st.spinner("Fetching latest odds from RotoWire..."):
+                                result = subprocess.run(
+                                    [sys.executable, "scrapers/rotowire_odds.py", "--no-save"],
+                                    capture_output=True, text=True, timeout=20
+                                )
+                                # Re-run the scraper to save
+                                subprocess.run(
+                                    [sys.executable, "scrapers/rotowire_odds.py"],
+                                    capture_output=True, text=True, timeout=20
+                                )
+                            st.success("Odds refreshed – reload page to see updated values.")
+                            st.rerun()
+                        except Exception as refresh_err:
+                            st.error(f"Could not refresh odds: {refresh_err}")
+                with info_col:
+                    st.info(
+                        "Market odds not loaded yet for this event. "
+                        "Click **Refresh Odds** to pull the latest lines from RotoWire "
+                        "(works for any current PGA Tour event).",
+                        icon="\u2139\ufe0f",
+                    )
+
+            # Build display columns
+            display_cols = ['name', 'win_probability']
+            col_renames = {'name': 'Player', 'win_probability': 'Win Prob'}
+
+            if 'owgr_rank_current' in predictions.columns:
+                display_cols.append('owgr_rank_current')
+                col_renames['owgr_rank_current'] = 'OWGR'
+
+            if has_odds:
+                if has_dk:
+                    display_cols.append('dk_odds')
+                    col_renames['dk_odds'] = 'DK Odds'
+                display_cols += ['best_odds', 'best_book', 'avg_novig_prob', 'Value Bet']
+                col_renames.update({
+                    'best_odds':     'Best Odds',
+                    'best_book':     'Best Book',
+                    'avg_novig_prob': 'Mkt NoVig%',
+                })
+
+            # When odds are loaded, show full field; otherwise respect the slider
+            if has_odds:
+                rows_to_show = predictions[[c for c in display_cols if c in predictions.columns]].copy()
             else:
-                st.warning(f"No field data available for {tournament}")
+                rows_to_show = predictions[[c for c in display_cols if c in predictions.columns]].head(num_predictions).copy()
+            pred_display = rows_to_show.rename(columns=col_renames)
+
+            pred_display['Win Prob'] = pred_display['Win Prob'].apply(lambda x: f"{x*100:.2f}%")
+            if 'OWGR' in pred_display.columns:
+                pred_display['OWGR'] = pred_display['OWGR'].apply(
+                    lambda x: str(int(x)) if pd.notna(x) else 'N/A'
+                )
+            if has_odds:
+                def fmt_odds(x):
+                    if pd.isna(x):
+                        return 'N/A'
+                    return f"+{int(x)}" if int(x) >= 0 else str(int(x))
+                if has_dk and 'DK Odds' in pred_display.columns:
+                    pred_display['DK Odds'] = pred_display['DK Odds'].apply(fmt_odds)
+                if 'Best Odds' in pred_display.columns:
+                    pred_display['Best Odds'] = pred_display['Best Odds'].apply(fmt_odds)
+                pred_display['Mkt NoVig%'] = pred_display['Mkt NoVig%'].apply(
+                    lambda x: f"{x*100:.2f}%" if pd.notna(x) else 'N/A'
+                )
+
+            tbl_height = min(len(pred_display) * 35 + 40, 2200)
+            st.dataframe(pred_display, height=tbl_height, hide_index=True)
+
+            total_field = len(predictions)
+            if has_odds:
+                books_str = "DraftKings" if has_dk else "BetMGM/BetRivers"
+                shown = len(pred_display)
+                st.caption(f"Showing all {shown} players with odds | Odds: {books_str} via RotoWire")
+            else:
+                top_n_prob = predictions['win_probability'].head(num_predictions).sum()
+                st.caption(f"Top {num_predictions} of {total_field} players ({top_n_prob*100:.1f}% of win prob)")
+        else:
+            st.warning(f"No field data available for {tournament}")
+            
+    except Exception as e:
+        st.error(f"Could not generate predictions: {e}")
+
+else:
+    # Handle historical tournament predictions
+    if model_path.exists():
+        try:
+            import joblib
+            from models.predict_tournament import predict_field
+            
+            # Load features for selected tournament (prefer extended, then OWGR, then base)
+            for fp_candidate in [
+                Path(__file__).parent / "data_files" / "espn_with_extended_features.parquet",
+                Path(__file__).parent / "data_files" / "espn_with_owgr_features.parquet",
+                Path(__file__).parent / "data_files" / "espn_player_tournament_features.parquet",
+            ]:
+                if fp_candidate.exists():
+                    features_path = fp_candidate
+                    break
+            
+            if features_path.exists():
+                df_all = pd.read_parquet(features_path)
+                
+                # Filter by selected tournament and year
+                tournament_data = df_all[
+                    (df_all['tournament'] == tournament) & 
+                    (df_all['year'] == selected_year)
+                ]
+                
+                if not tournament_data.empty:
+                    field = tournament_data.copy()
+
+                    # Make predictions
+                    predictions = predict_field(field)
+
+                    # Try to enrich with market odds
+                    predictions = enrich_predictions_with_odds(predictions, tournament)
+
+                    has_odds = "avg_novig_prob" in predictions.columns and predictions["avg_novig_prob"].notna().any()
+                    has_dk = has_odds and "dk_odds" in predictions.columns and predictions["dk_odds"].notna().any()
+
+                    # Build display columns
+                    display_cols = ['name', 'win_probability']
+                    col_renames = {'name': 'Player', 'win_probability': 'Win Prob'}
+
+                    if 'owgr_rank_current' in predictions.columns:
+                        display_cols.append('owgr_rank_current')
+                        col_renames['owgr_rank_current'] = 'OWGR'
+
+                    if 'tournament_rank' in predictions.columns:
+                        display_cols.append('tournament_rank')
+                        col_renames['tournament_rank'] = 'Actual Finish'
+
+                    if has_odds:
+                        if has_dk:
+                            display_cols.append('dk_odds')
+                            col_renames['dk_odds'] = 'DK Odds'
+                        display_cols += ['best_odds', 'best_book', 'avg_novig_prob', 'Value Bet']
+                        col_renames.update({
+                            'best_odds':     'Best Odds',
+                            'best_book':     'Best Book',
+                            'avg_novig_prob': 'Mkt NoVig%',
+                        })
+
+                    # When odds are loaded, show full field; otherwise respect the slider
+                    if has_odds:
+                        hist_rows = predictions[[c for c in display_cols if c in predictions.columns]].copy()
+                    else:
+                        hist_rows = predictions[[c for c in display_cols if c in predictions.columns]].head(num_predictions).copy()
+                    pred_display = hist_rows.rename(columns=col_renames)
+
+                    pred_display['Win Prob'] = pred_display['Win Prob'].apply(lambda x: f"{x:.2%}")
+                    if 'OWGR' in pred_display.columns:
+                        pred_display['OWGR'] = pred_display['OWGR'].apply(
+                            lambda x: str(int(x)) if pd.notna(x) else 'N/A'
+                        )
+                    if has_odds:
+                        def fmt_odds_hist(x):
+                            if pd.isna(x): return 'N/A'
+                            return f"+{int(x)}" if int(x) >= 0 else str(int(x))
+                        if has_dk and 'DK Odds' in pred_display.columns:
+                            pred_display['DK Odds'] = pred_display['DK Odds'].apply(fmt_odds_hist)
+                        if 'Best Odds' in pred_display.columns:
+                            pred_display['Best Odds'] = pred_display['Best Odds'].apply(fmt_odds_hist)
+                        pred_display['Mkt NoVig%'] = pred_display['Mkt NoVig%'].apply(
+                            lambda x: f"{x*100:.2f}%" if pd.notna(x) else 'N/A'
+                        )
+
+                    tbl_height_hist = min(len(pred_display) * 35 + 40, 2200)
+                    st.dataframe(pred_display, hide_index=True, height=tbl_height_hist)
+
+                    total_field = len(predictions)
+                    if has_odds:
+                        shown = len(pred_display)
+                        st.caption(f"Showing all {shown} players with odds | Odds: BetMGM/BetRivers via RotoWire")
+                    else:
+                        top_n_prob = predictions['win_probability'].head(num_predictions).sum()
+                        st.caption(f"Top {num_predictions} of {total_field} players ({top_n_prob*100:.1f}% of win prob)")
+                    st.caption(f"Based on {tournament} {selected_year} field")
+
+                    if 'owgr_rank_current' not in predictions.columns:
+                        st.caption("OWGR features not present — run `python features/build_owgr_features.py` to add.")
+                else:
+                    st.warning(f"No historical data available for {tournament} ({selected_year})")
+            else:
+                st.warning("Feature data not found. Please build features first.")
                 
         except Exception as e:
-            st.error(f"Could not generate predictions: {e}")
-    
-    else:
-        # Handle historical tournament predictions
-        if model_path.exists():
-            try:
-                import joblib
-                from models.predict_tournament import predict_field
-                
-                # Load features for selected tournament (prefer OWGR-enhanced version)
-                features_path = Path(__file__).parent / "data_files" / "espn_with_owgr_features.parquet"
-                if not features_path.exists():
-                    features_path = Path(__file__).parent / "data_files" / "espn_player_tournament_features.parquet"
-                
-                if features_path.exists():
-                    df_all = pd.read_parquet(features_path)
-                    
-                    # Filter by selected tournament and year
-                    tournament_data = df_all[
-                        (df_all['tournament'] == tournament) & 
-                        (df_all['year'] == selected_year)
-                    ]
-                    
-                    if not tournament_data.empty:
-                        field = tournament_data.copy()
-                        
-                        # Make predictions
-                        predictions = predict_field(field)
-                        
-                        # Build display columns dynamically (OWGR may be absent)
-                        display_cols = ['name', 'win_probability']
-                        col_renames = {'name': 'Player', 'win_probability': 'Win Prob'}
-
-                        if 'owgr_rank_current' in predictions.columns:
-                            display_cols.append('owgr_rank_current')
-                            col_renames['owgr_rank_current'] = 'OWGR Rank'
-
-                        if 'tournament_rank' in predictions.columns:
-                            display_cols.append('tournament_rank')
-                            col_renames['tournament_rank'] = 'Actual Finish'
-
-                        pred_display = predictions[display_cols].head(num_predictions).copy()
-                        pred_display = pred_display.rename(columns=col_renames)
-
-                        # Format columns
-                        pred_display['Win Prob'] = pred_display['Win Prob'].apply(lambda x: f"{x:.2%}")
-                        if 'OWGR Rank' in pred_display.columns:
-                            # Convert to int for non-null values, then to string, then fill NaN
-                            pred_display['OWGR Rank'] = pred_display['OWGR Rank'].apply(
-                                lambda x: str(int(x)) if pd.notna(x) else 'N/A'
-                            )
-
-                        st.dataframe(pred_display, hide_index=True, height=get_dataframe_height(pred_display))
-                        
-                        # Show probability coverage
-                        top_n_prob = predictions['win_probability'].head(num_predictions).sum()
-                        total_field = len(predictions)
-                        st.caption(f"Showing top {num_predictions} of {total_field} players (covering {top_n_prob*100:.1f}% of total win probability)")
-                        st.caption(f"Based on {tournament} {selected_year} field")
-
-                        # Informative note when OWGR features are missing
-                        if 'owgr_rank_current' not in predictions.columns:
-                            st.caption("OWGR features not present for this dataset — run `python features/build_owgr_features.py` to add world ranking data (optional).")
-                    else:
-                        st.warning(f"No historical data available for {tournament} ({selected_year})")
-                else:
-                    st.warning("Feature data not found. Please build features first.")
-                    
-            except Exception as e:
-                st.error(f"Error loading model predictions: {e}")
-                st.info("Run `python models/train_improved_model.py` to train the model.")
-        else:
-            st.info(
-                "Model not yet trained. Run `python models/train_improved_model.py` "
-                "to train the winner prediction model."
-            )
-
-with col2:
-    st.subheader("📊 Model Confidence")
-    
-    if model_path.exists():
-        # Show feature importance
-        importance_path = Path(__file__).parent / "models" / "saved_models" / "feature_importance_v2.csv"
-        if importance_path.exists():
-            feat_imp = pd.read_csv(importance_path).head(10)
-            feat_imp.columns = ['Feature', 'Importance']
-            st.dataframe(feat_imp, hide_index=True, height=get_dataframe_height(feat_imp))
-            st.caption("Top 10 Most Important Features")
+            st.error(f"Error loading model predictions: {e}")
+            st.info("Run `python models/train_improved_model.py` to train the model.")
     else:
         st.info(
-            "Confidence metrics will appear here once a model is trained."
+            "Model not yet trained. Run `python models/train_improved_model.py` "
+            "to train the winner prediction model."
         )
+
+# ── Model Confidence ────────────────────────────────────────────────────────
+st.markdown("---")
+st.subheader("📊 Model Confidence")
+
+if model_path.exists():
+    # Show feature importance
+    importance_path = Path(__file__).parent / "models" / "saved_models" / "feature_importance_v2.csv"
+    if importance_path.exists():
+        feat_imp = pd.read_csv(importance_path).head(20)
+        feat_imp.columns = ['Feature', 'Importance']
+        st.dataframe(feat_imp, hide_index=True, height=get_dataframe_height(feat_imp))
+        st.caption("Top 20 Most Important Features")
+else:
+    st.info(
+        "Confidence metrics will appear here once a model is trained."
+    )
 
 # ── Model Quality Statistics ────────────────────────────────────────────────
 st.markdown("---")
@@ -601,6 +829,142 @@ if features_path.exists():
         st.write("No form leaderboard available yet.")
 else:
     st.info("Features dataset not found. Run `python features/build_features.py` to create features, then optionally run `python features/build_owgr_features.py` to add OWGR data.")
+
+# ── Value Bets (Odds Comparison) ─────────────────────────────────────────────
+st.markdown("---")
+st.subheader("💰 Value Bets – Model vs Market Odds")
+
+MAJOR_OPTIONS = {
+    "Masters (Apr 2026)":        "masters",
+    "PGA Championship (May 2026)": "pga_champ",
+    "US Open (Jun 2026)":        "us_open",
+    "The Open (Jul 2026)":       "open",
+    "All Majors":                "all",
+}
+
+odds_col1, odds_col2 = st.columns([2, 1])
+with odds_col1:
+    selected_major = st.selectbox(
+        "Select Major", list(MAJOR_OPTIONS.keys()), index=4
+    )
+with odds_col2:
+    refresh_odds = st.button("🔄 Refresh Odds (uses 4 API credits)", type="secondary")
+
+event_key = MAJOR_OPTIONS[selected_major]
+
+odds_data_path = Path(__file__).parent / "data_files" / "odds_consensus_latest.parquet"
+odds_available = odds_data_path.exists()
+
+if refresh_odds:
+    with st.spinner("Fetching latest odds from The Odds API…"):
+        try:
+            from scrapers.odds_api import fetch_all_golf_odds
+            events = None if event_key == "all" else [event_key]
+            fetch_all_golf_odds(events=events)
+            odds_available = True
+            st.success("Odds refreshed!")
+        except Exception as e:
+            st.error(f"Could not refresh odds: {e}")
+
+if not odds_available:
+    st.info(
+        "No odds data yet. Click **Refresh Odds** above or run "
+        "`python scrapers/odds_api.py` in your terminal."
+    )
+else:
+    try:
+        from tools.odds_comparison import load_model_predictions, load_odds, build_comparison
+
+        with st.spinner("Building value-bet comparison…"):
+            preds = load_model_predictions(event_key)
+            odds_df = load_odds(event_key)
+            comp = build_comparison(preds, odds_df)
+
+        # Separate positive-edge and negative-edge rows
+        has_odds = comp[comp["avg_novig_prob"].notna()].copy()
+        positive = has_odds[has_odds["edge_pp"] > 0].copy()
+        negative = has_odds[has_odds["edge_pp"] < 0].copy()
+
+        # ── Summary metrics ────────────────────────────────────────────────
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Value Bets Found", len(positive))
+        m2.metric("Players w/ Market Lines", len(has_odds))
+        m3.metric(
+            "Best Edge",
+            f"{positive['edge_pp'].max():.1f}pp" if not positive.empty else "—",
+            delta=None,
+        )
+
+        # ── Value bets table ───────────────────────────────────────────────
+        if positive.empty:
+            st.info("No positive edges found for the selected events.")
+        else:
+            def fmt_american(val):
+                if pd.isna(val):
+                    return "N/A"
+                return f"+{int(val)}" if val > 0 else str(int(val))
+
+            display = positive[[
+                "event_label", "name", "model_prob", "avg_novig_prob",
+                "edge_pp", "dk_odds", "best_odds", "best_book", "half_kelly_pct",
+            ]].copy()
+            display = display.rename(columns={
+                "event_label":   "Event",
+                "name":          "Player",
+                "model_prob":    "Model %",
+                "avg_novig_prob": "Mkt NoVig %",
+                "edge_pp":       "Edge (pp)",
+                "dk_odds":       "DK Odds",
+                "best_odds":     "Best Odds",
+                "best_book":     "Best Book",
+                "half_kelly_pct": "Half-Kelly %",
+            })
+            display["Model %"]    = display["Model %"].apply(lambda x: f"{x*100:.2f}%")
+            display["Mkt NoVig %"] = display["Mkt NoVig %"].apply(lambda x: f"{x*100:.2f}%")
+            display["Edge (pp)"]  = display["Edge (pp)"].apply(lambda x: f"+{x:.2f}")
+            display["DK Odds"]    = display["DK Odds"].apply(fmt_american)
+            display["Best Odds"]  = display["Best Odds"].apply(fmt_american)
+            display["Half-Kelly %"] = display["Half-Kelly %"].apply(
+                lambda x: f"{x:.2f}%" if pd.notna(x) else "—"
+            )
+
+            st.dataframe(
+                display,
+                hide_index=True,
+                height=get_dataframe_height(display, max_height=500),
+            )
+            st.caption(
+                "**Edge (pp)** = Model win% minus market no-vig implied probability. "
+                "**Half-Kelly %** = suggested stake as % of bankroll (half-Kelly criterion). "
+                "Positive edge = model sees more value than the market price implies."
+            )
+
+        # ── Model vs Market divergence ─────────────────────────────────────
+        with st.expander("Model underweights these players (market favours them)"):
+            if negative.empty:
+                st.write("None.")
+            else:
+                neg_display = negative[[
+                    "event_label", "name", "model_prob", "avg_novig_prob", "edge_pp", "dk_odds"
+                ]].head(20).copy()
+                neg_display = neg_display.rename(columns={
+                    "event_label": "Event", "name": "Player",
+                    "model_prob": "Model %", "avg_novig_prob": "Mkt NoVig %",
+                    "edge_pp": "Edge (pp)", "dk_odds": "DK Odds",
+                })
+                neg_display["Model %"]    = neg_display["Model %"].apply(lambda x: f"{x*100:.2f}%")
+                neg_display["Mkt NoVig %"] = neg_display["Mkt NoVig %"].apply(lambda x: f"{x*100:.2f}%")
+                neg_display["Edge (pp)"]  = neg_display["Edge (pp)"].apply(lambda x: f"{x:.2f}")
+                neg_display["DK Odds"]    = neg_display["DK Odds"].apply(fmt_american)
+                st.dataframe(neg_display, hide_index=True)
+
+        if odds_data_path.exists():
+            import os
+            mtime = pd.Timestamp(os.path.getmtime(odds_data_path), unit='s', tz='UTC')
+            st.caption(f"Odds data last updated: {mtime.strftime('%Y-%m-%d %H:%M UTC')}")
+
+    except Exception as e:
+        st.error(f"Could not build odds comparison: {e}")
 
 # ── Footer ───────────────────────────────────────────────────────────────────
 

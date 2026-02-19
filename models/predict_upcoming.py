@@ -68,9 +68,15 @@ def build_current_player_features(historical_features_file=None):
         DataFrame with current player features
     """
     if historical_features_file is None:
-        historical_features_file = DATA_DIR / 'espn_with_owgr_features.parquet'
-        if not historical_features_file.exists():
-            historical_features_file = DATA_DIR / 'espn_player_tournament_features.parquet'
+        ext_path = DATA_DIR / 'espn_with_extended_features.parquet'
+        owgr_path = DATA_DIR / 'espn_with_owgr_features.parquet'
+        base_path = DATA_DIR / 'espn_player_tournament_features.parquet'
+        if ext_path.exists():
+            historical_features_file = ext_path
+        elif owgr_path.exists():
+            historical_features_file = owgr_path
+        else:
+            historical_features_file = base_path
     
     if not historical_features_file.exists():
         raise FileNotFoundError(f"Historical features not found: {historical_features_file}")
@@ -80,11 +86,59 @@ def build_current_player_features(historical_features_file=None):
     
     # Get most recent record for each player
     df['date'] = pd.to_datetime(df['date'], utc=True)
+    # Drop rows with NaT dates (placeholder sentinel rows) so tail(1) picks the
+    # actual most-recent tournament record, not a dateless 2018 stub.
+    df = df.dropna(subset=['date'])
     df = df.sort_values('date')
     
     # Take latest record per player
     latest = df.groupby('player_id').tail(1).copy()
-    
+
+    # ── Staleness penalty ────────────────────────────────────────────────────
+    # If a player's most-recent record is >90 days old, regress short-window
+    # form features toward the field median so stale data doesn't over-rank
+    # players whose quality we can no longer accurately measure.
+    now = pd.Timestamp.now(tz='UTC')
+    latest['_data_age_days'] = (now - latest['date']).dt.days
+
+    FORM_COLS = [
+        'prior_avg_score_5', 'prior_avg_score_10',
+        'prior_std_score_5', 'prior_std_score_10',
+        'prior_top10_rate_5', 'prior_top10_rate_10',
+        'last_event_score', 'last_event_rank',
+        'season_to_date_avg_score',
+        'sg_total_season', 'sg_off_tee_season', 'sg_approach_season',
+        'sg_around_green_season', 'sg_putting_season',
+        'driving_distance_season', 'gir_pct_season',
+    ]
+    existing_form = [c for c in FORM_COLS if c in latest.columns]
+
+    if existing_form:
+        field_medians = latest[existing_form].median()
+        STALE_THRESHOLD = 90   # days
+        MAX_AGE         = 365  # days – full regression at 1 year
+
+        def staleness_alpha(age_days):
+            """Linear decay: 0 at 90d -> 1.0 at 365d (full regression to median)."""
+            if age_days <= STALE_THRESHOLD:
+                return 0.0
+            return min(1.0, (age_days - STALE_THRESHOLD) / (MAX_AGE - STALE_THRESHOLD))
+
+        alphas = latest['_data_age_days'].apply(staleness_alpha)
+        stale_mask = alphas > 0
+        n_stale = stale_mask.sum()
+        if n_stale > 0:
+            print(f"[INFO] Applying staleness regression to {n_stale} players "
+                  f"(>{STALE_THRESHOLD}d since last record)")
+            for col in existing_form:
+                med = field_medians[col]
+                latest.loc[stale_mask, col] = (
+                    latest.loc[stale_mask, col] * (1 - alphas[stale_mask])
+                    + med * alphas[stale_mask]
+                )
+
+    latest = latest.drop(columns=['_data_age_days'])
+
     print(f"Built current features for {len(latest)} players")
     return latest
 
