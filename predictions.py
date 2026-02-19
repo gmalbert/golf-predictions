@@ -88,6 +88,25 @@ def enrich_predictions_with_odds(
         if odds_filtered.empty:
             return predictions
 
+        # Normalize `best_book` values to user-friendly names (e.g. 'betrivers' -> 'BetRivers')
+        def _normalize_book(name):
+            if pd.isna(name):
+                return name
+            key = str(name).strip().lower()
+            mapping = {
+                'mgm': 'BetMGM', 'betmgm': 'BetMGM', 'bet_mgm': 'BetMGM',
+                'betrivers': 'BetRivers', 'bet_rivers': 'BetRivers',
+                'draftkings': 'DraftKings', 'draft_kings': 'DraftKings',
+                'fanduel': 'FanDuel', 'fan_duel': 'FanDuel',
+                'caesars': 'Caesars',
+                'hardrock': 'Hard Rock',
+                'thescore': 'TheScore', 'the_score': 'TheScore', 'score': 'TheScore'
+            }
+            return mapping.get(key, str(name).strip().title())
+
+        if 'best_book' in odds_filtered.columns:
+            odds_filtered['best_book'] = odds_filtered['best_book'].apply(_normalize_book)
+
         odds_filtered["player_key"] = odds_filtered["player"].str.strip().str.lower()
 
         # Ensure needed columns exist
@@ -377,12 +396,12 @@ if is_upcoming:
                     'avg_novig_prob': 'Mkt NoVig%',
                 })
 
-            # When odds are loaded, show full field; otherwise respect the slider
-            if has_odds:
-                rows_to_show = predictions[[c for c in display_cols if c in predictions.columns]].copy()
-            else:
-                rows_to_show = predictions[[c for c in display_cols if c in predictions.columns]].head(num_predictions).copy()
+            # Respect Top‑N slider for upcoming predictions (don't show entire field)
+            rows_to_show = predictions[[c for c in display_cols if c in predictions.columns]].head(num_predictions).copy()
             pred_display = rows_to_show.rename(columns=col_renames)
+
+            # Add predicted rank (1 = top predicted winner, 2 = second, ...)
+            pred_display.insert(0, 'Rank', range(1, len(pred_display) + 1))
 
             pred_display['Win Prob'] = pred_display['Win Prob'].apply(lambda x: f"{x*100:.2f}%")
             if 'OWGR' in pred_display.columns:
@@ -406,12 +425,15 @@ if is_upcoming:
             st.dataframe(pred_display, height=tbl_height, hide_index=True)
 
             total_field = len(predictions)
+            top_n_prob = predictions['win_probability'].head(num_predictions).sum()
             if has_odds:
                 books_str = "DraftKings" if has_dk else "BetMGM/BetRivers"
-                shown = len(pred_display)
-                st.caption(f"Showing all {shown} players with odds | Odds: {books_str} via RotoWire")
+                st.caption(f"Top {num_predictions} of {total_field} players ({top_n_prob*100:.1f}% of win prob) | Odds: {books_str} via RotoWire")
+                st.caption(
+                    "**Value Bet** — `YES +Xpp` means the model's win probability exceeds the market no‑vig implied probability by X percentage points (positive edge). "
+                    "`no (‑Xpp)` means the market is priced stronger than the model. Use this as a quick value indicator."
+                )
             else:
-                top_n_prob = predictions['win_probability'].head(num_predictions).sum()
                 st.caption(f"Top {num_predictions} of {total_field} players ({top_n_prob*100:.1f}% of win prob)")
         else:
             st.warning(f"No field data available for {tournament}")
@@ -487,6 +509,9 @@ else:
                         hist_rows = predictions[[c for c in display_cols if c in predictions.columns]].head(num_predictions).copy()
                     pred_display = hist_rows.rename(columns=col_renames)
 
+                    # Add predicted rank (1 = top predicted winner)
+                    pred_display.insert(0, 'Rank', range(1, len(pred_display) + 1))
+
                     pred_display['Win Prob'] = pred_display['Win Prob'].apply(lambda x: f"{x:.2%}")
                     if 'OWGR' in pred_display.columns:
                         pred_display['OWGR'] = pred_display['OWGR'].apply(
@@ -511,6 +536,10 @@ else:
                     if has_odds:
                         shown = len(pred_display)
                         st.caption(f"Showing all {shown} players with odds | Odds: BetMGM/BetRivers via RotoWire")
+                        st.caption(
+                            "**Value Bet** — `YES +Xpp` means the model's win probability exceeds the market no‑vig implied probability by X percentage points (positive edge). "
+                            "`no (‑Xpp)` means the market is priced stronger than the model. Use this as a quick value indicator."
+                        )
                     else:
                         top_n_prob = predictions['win_probability'].head(num_predictions).sum()
                         st.caption(f"Top {num_predictions} of {total_field} players ({top_n_prob*100:.1f}% of win prob)")
