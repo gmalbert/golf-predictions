@@ -133,6 +133,7 @@ dmypy.json
 data_files/owgr_pdfs/*.pdf  # OWGR PDFs (large files, can be re-scraped)
 data_files/espn_pga_all/    # ESPN scraped HTML (large, can be re-scraped)
 data_files/cache/           # HTTP cache
+scrapers/data_files/cache/  # scraper-local HTTP cache
 
 # Keep important processed data (commented out):
 # data_files/owgr_rankings.parquet
