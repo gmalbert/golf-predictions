@@ -600,10 +600,10 @@ with st.expander("View Detailed Model Performance Metrics", expanded=False):
         with st.spinner("Computing model quality metrics..."):
             # Load model and data
             model, feature_cols = load_model_and_features()
-            train_df, val_df, test_df, _ = load_and_prepare_data(feature_cols)
+            _, val_df, test_df, _ = load_and_prepare_data(feature_cols)
             
-            # Get predictions
-            train_proba, y_train = get_predictions(model, train_df, feature_cols)
+            # Get predictions (validation + test only — train metrics are
+            # always inflated because the model was fit to that data)
             val_proba, y_val = get_predictions(model, val_df, feature_cols)
             test_proba, y_test = get_predictions(model, test_df, feature_cols)
         
@@ -614,7 +614,6 @@ with st.expander("View Detailed Model Performance Metrics", expanded=False):
             st.markdown("### Overall Performance Metrics")
             
             overall_metrics_df = pd.DataFrame({
-                'Train': compute_overall_metrics(y_train, train_proba),
                 'Validation': compute_overall_metrics(y_val, val_proba),
                 'Test': compute_overall_metrics(y_test, test_proba)
             }).T

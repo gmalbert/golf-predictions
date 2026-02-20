@@ -256,9 +256,10 @@ def main():
     print(f"  Val samples: {len(val_df):,}")
     print(f"  Test samples: {len(test_df):,}")
     
-    # Get predictions for all sets
+    # Get predictions for val + test only.
+    # Train metrics are intentionally excluded — a model always scores higher
+    # on its own training data, making those numbers misleading.
     print("\nGenerating predictions...")
-    train_proba, y_train = get_predictions(model, train_df, feature_cols)
     val_proba, y_val = get_predictions(model, val_df, feature_cols)
     test_proba, y_test = get_predictions(model, test_df, feature_cols)
     
@@ -266,11 +267,10 @@ def main():
     # 1. Overall Metrics
     # ========================================================================
     print("\n" + "="*80)
-    print("1. OVERALL METRICS")
+    print("1. OVERALL METRICS (out-of-sample only)")
     print("="*80)
     
     overall_metrics = pd.DataFrame({
-        'Train': compute_overall_metrics(y_train, train_proba),
         'Validation': compute_overall_metrics(y_val, val_proba),
         'Test': compute_overall_metrics(y_test, test_proba)
     }).T
