@@ -22,7 +22,11 @@ import xgboost as xgb
 
 # Paths
 PROJ_ROOT = Path(__file__).resolve().parent.parent
-DATA_PATH = PROJ_ROOT / 'data_files' / 'espn_with_owgr_features.parquet'
+# Prefer the extended-features parquet (has SG stats, weather, course info, etc.);
+# fall back to the lighter OWGR-only parquet if it's absent.
+_EXT = PROJ_ROOT / 'data_files' / 'espn_with_extended_features.parquet'
+_OWGR = PROJ_ROOT / 'data_files' / 'espn_with_owgr_features.parquet'
+DATA_PATH = _EXT if _EXT.exists() else _OWGR
 MODEL_DIR = PROJ_ROOT / 'models' / 'saved_models'
 MODEL_PATH = MODEL_DIR / 'winner_predictor_v2.json'
 FEATURES_PATH = MODEL_DIR / 'model_features_v2.txt'
