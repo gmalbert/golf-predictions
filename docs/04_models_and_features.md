@@ -11,64 +11,64 @@
 
 | Feature | Source | Description |
 |---------|--------|-------------|
-| `sg_total` | PGA Tour | Strokes Gained: Total (rolling avg) |
-| `sg_off_tee` | PGA Tour | Strokes Gained: Off the Tee |
-| `sg_approach` | PGA Tour | Strokes Gained: Approach the Green |
-| `sg_around_green` | PGA Tour | Strokes Gained: Around the Green |
-| `sg_putting` | PGA Tour | Strokes Gained: Putting |
-| `driving_distance` | PGA Tour | Average driving distance |
-| `driving_accuracy` | PGA Tour | Fairways hit % |
-| `gir_pct` | PGA Tour | Greens in Regulation % |
-| `scrambling_pct` | PGA Tour | Up-and-down % from missed greens |
-| `putts_per_gir` | PGA Tour | Putts per green in regulation |
-| `birdie_avg` | PGA Tour | Birdies per round |
-| `scoring_avg` | PGA Tour | Adjusted scoring average |
-| `top10_pct` | Calculated | % of events finishing Top-10 (rolling) |
-| `cut_pct` | Calculated | % of cuts made (rolling) |
-| `win_pct` | Calculated | % of wins (rolling) |
+| ✅ `sg_total` | PGA Tour | Strokes Gained: Total (rolling avg) |
+| ✅ `sg_off_tee` | PGA Tour | Strokes Gained: Off the Tee |
+| ✅ `sg_approach` | PGA Tour | Strokes Gained: Approach the Green |
+| ✅ `sg_around_green` | PGA Tour | Strokes Gained: Around the Green |
+| ✅ `sg_putting` | PGA Tour | Strokes Gained: Putting |
+| ✅ `driving_distance` | PGA Tour | Average driving distance |
+| ✅ `driving_accuracy` | PGA Tour | Fairways hit % |
+| ✅ `gir_pct` | PGA Tour | Greens in Regulation % |
+| ✅ `scrambling_pct` | PGA Tour | Up-and-down % from missed greens |
+| ✅ `putts_per_gir` | PGA Tour | Putts per green in regulation |
+| ✅ `birdie_avg` | PGA Tour | Birdies per round |
+| ✅ `scoring_avg` | PGA Tour | Adjusted scoring average |
+| ✅ `top10_pct` | Calculated | % of events finishing Top-10 (rolling) |
+| ✅ `cut_pct` | Calculated | % of cuts made (rolling) |
+| ✅ `win_pct` | Calculated | % of wins (rolling) |
 
 ### B. Form / Momentum Features
 
 | Feature | Window | Description |
 |---------|--------|-------------|
-| `recent_sg_total_5` | Last 5 events | Rolling mean SG:Total |
-| `recent_sg_total_10` | Last 10 events | Rolling mean SG:Total |
-| `recent_finish_avg_5` | Last 5 events | Average finish position |
-| `recent_top10_count_10` | Last 10 events | Count of Top-10 finishes |
-| `momentum_score` | Last 5 vs last 20 | SG improvement trend |
-| `days_since_last_event` | Calculated | Rest / fatigue indicator |
-| `events_in_last_30d` | Calculated | Workload |
+| ✅ `recent_sg_total_5` | Last 5 events | Rolling mean SG:Total |
+| ✅ `recent_sg_total_10` | Last 10 events | Rolling mean SG:Total |
+| ✅ `recent_finish_avg_5` | Last 5 events | Average finish position |
+| ✅ `recent_top10_count_10` | Last 10 events | Count of Top-10 finishes |
+| ✅ `momentum_score` | Last 5 vs last 20 | SG improvement trend |
+| ✅ `days_since_last_event` | Calculated | Rest / fatigue indicator |
+| ✅ `events_in_last_30d` | Calculated | Workload |
 
 ### C. Course Fit Features
 
 | Feature | Source | Description |
 |---------|--------|-------------|
-| `course_history_avg_finish` | Historical | Past finishes at this course |
-| `course_history_sg` | Historical | SG at this specific course |
-| `course_length_fit` | Course data | How player's distance matches course length |
-| `course_type` | Manual tag | Links / parkland / desert / tropical |
-| `past_appearances` | Calculated | # of times played this course |
-| `bermuda_vs_bent` | Course data | Grass type putting fit |
+| ✅ `course_history_avg_finish` | Historical | Past finishes at this course |
+| ✅ `course_history_sg` | Historical | SG at this specific course |
+| ✅ `course_length_fit` | Course data | How player's distance matches course length |
+| ✅ `course_type` | Manual tag | Links / parkland / desert / tropical |
+| ✅ `past_appearances` | Calculated | # of times played this course |
+| ✅ `bermuda_vs_bent` | Course data | Grass type putting fit |
 
 ### D. Tournament Context Features
 
 | Feature | Source | Description |
 |---------|--------|-------------|
-| `field_strength` | OWGR | Average OWGR of field |
-| `purse_size` | Schedule | Tournament purse (motivation proxy) |
-| `is_major` | Flag | Major championship indicator |
-| `is_playoff_event` | Flag | FedEx Cup playoff event |
-| `tournament_round` | Leaderboard | Current round (1-4) |
+| ✅ `field_strength` | OWGR | Average OWGR of field |
+| ✅ `purse_size` | Schedule | Tournament purse (motivation proxy) |
+| ✅ `is_major` | Flag | Major championship indicator |
+| ✅ `is_playoff_event` | Flag | FedEx Cup playoff event |
+| ✅ `tournament_round` | Leaderboard | Current round (1-4) |
 
 ### E. Environmental Features
 
 | Feature | Source | Description |
 |---------|--------|-------------|
-| `wind_speed_avg` | Open-Meteo | Average wind during rounds |
-| `wind_gust_max` | Open-Meteo | Max gusts |
-| `temperature` | Open-Meteo | Average temperature |
-| `precipitation_mm` | Open-Meteo | Rain accumulation |
-| `altitude_ft` | Course data | Course elevation |
+| ✅ `wind_speed_avg` | Open-Meteo | Average wind during rounds |
+| ✅ `wind_gust_max` | Open-Meteo | Max gusts |
+| ✅ `temperature` | Open-Meteo | Average temperature |
+| ✅ `precipitation_mm` | Open-Meteo | Rain accumulation |
+| ✅ `altitude_ft` | Course data | Course elevation |
 
 ---
 
