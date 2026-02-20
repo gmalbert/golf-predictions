@@ -72,7 +72,9 @@
 
 ---
 
-## Feature Engineering Code
+## Feature Engineering Code ✅
+
+*Implemented in `features/build_features.py` (see the script in the repo).* 
 
 ```python
 # features/build_features.py
