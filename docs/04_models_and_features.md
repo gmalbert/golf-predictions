@@ -24,12 +24,12 @@
 | ✅ `sg_around_green` | PGA Tour | Strokes Gained: Around the Green |
 | ✅ `sg_putting` | PGA Tour | Strokes Gained: Putting |
 | ✅ `driving_distance` | PGA Tour | Average driving distance |
-| `driving_accuracy` | PGA Tour | Fairways hit % (pending implementation) |
+| ✅ `driving_accuracy` | PGA Tour | Fairways hit % (now wired into feature pipeline) |
 | ✅ `gir_pct` | PGA Tour | Greens in Regulation % |
 | ✅ `scrambling_pct` | PGA Tour | Up-and-down % from missed greens |
 | ✅ `putts_per_gir` | PGA Tour | Putts per green in regulation |
 | ✅ `birdie_avg` | PGA Tour | Birdies per round |
-| `scoring_avg` | PGA Tour | Adjusted scoring average (scraped, not yet aggregated) |
+| ✅ `scoring_avg` | PGA Tour | Adjusted scoring average (now wired into feature pipeline) |
 | ✅ `top10_pct` | Calculated | % of events finishing Top-10 (rolling) |
 | ✅ `cut_pct` | Calculated | % of cuts made (rolling) |
 | ✅ `win_pct` | Calculated | % of wins (rolling) |
@@ -197,7 +197,7 @@ if __name__ == "__main__":
 
 ## Suggested Models (Progressive Complexity)
 
-### Tier 1 — Baseline (Week 1-2)
+### Tier 1 — Baseline (Week 1-2) ✅ implemented (`models/baseline_logreg.py`)
 
 **Logistic Regression / Ordinal Regression**
 
@@ -244,7 +244,7 @@ def train_baseline(df: pd.DataFrame):
 
 ---
 
-### Tier 2 — Gradient Boosting (Month 1-2)
+### Tier 2 — Gradient Boosting (Month 1-2) ✅ implemented (`models/train_improved_model.py` + XGBoost)
 
 **XGBoost / LightGBM** – The workhorse of tabular prediction.
 
@@ -321,7 +321,7 @@ def train_xgboost(df: pd.DataFrame):
 
 ---
 
-### Tier 3 — Ensemble & Ranking Models (Month 3-6)
+### Tier 3 — Ensemble & Ranking Models (Month 3-6) ✅ implemented (`models/lgbm_ranker.py`)
 
 **LightGBM Ranker** – Directly optimize for "who finishes highest?"
 
@@ -392,7 +392,7 @@ def train_ranker(df: pd.DataFrame):
 
 ---
 
-### Tier 4 — Deep Learning (Month 6+)
+### Tier 4 — Deep Learning (Month 6+) ✅ implemented (`models/deep_model.py`)
 
 **Neural network for sequence modelling** – Treat a player's tournament history
 as a time series.
