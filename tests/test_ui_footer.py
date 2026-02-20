@@ -12,10 +12,15 @@ def test_ui_pages_include_footer():
     repo_root = Path(__file__).resolve().parent.parent
     py_files = list(repo_root.rglob('*.py'))
 
+    # Directories that are never project source code
+    EXCLUDE_DIRS = {'venv', '.venv', 'env', '__pycache__', '.git', 'node_modules', 'site-packages'}
+
     ui_files = []
     for p in py_files:
-        # Skip test files and the footer module itself
+        # Skip test files, the footer module, and third-party/virtual-env directories
         if p.match('**/tests/**') or p.name == 'footer.py':
+            continue
+        if any(part in EXCLUDE_DIRS for part in p.parts):
             continue
         text = p.read_text(encoding='utf-8', errors='ignore')
         if re.search(r"\bimport\s+streamlit\b|\bfrom\s+streamlit\b|\bst\.set_page_config\b", text):

@@ -52,7 +52,8 @@ FEAT_DIR  = Path(__file__).resolve().parent
 # Stat columns produced by pga_stats.py that we want rolling averages for
 SG_STAT_COLS = [
     "sg_total", "sg_off_tee", "sg_approach", "sg_around_green", "sg_putting",
-    "driving_distance", "gir_pct", "scrambling_pct", "putts_per_round", "birdie_avg",
+    "driving_distance", "driving_accuracy", "gir_pct", "scrambling_pct",
+    "putts_per_round", "birdie_avg", "scoring_avg",
 ]
 
 COURSE_TYPE_MAP = {

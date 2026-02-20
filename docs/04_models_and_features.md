@@ -7,6 +7,13 @@
 
 ## Feature Categories
 
+> **Note:** a ✅ indicates the feature has been wired into the current
+> feature‑building pipeline (`features/build_features.py` or
+> `features/build_extended_features.py`).  Several rows below are still
+> placeholders – they appear in the plan but the code hasn’t generated them
+> yet.  (See 📝 status comments on individual rows.)
+
+
 ### A. Player Skill Features (most important)
 
 | Feature | Source | Description |
@@ -17,12 +24,12 @@
 | ✅ `sg_around_green` | PGA Tour | Strokes Gained: Around the Green |
 | ✅ `sg_putting` | PGA Tour | Strokes Gained: Putting |
 | ✅ `driving_distance` | PGA Tour | Average driving distance |
-| ✅ `driving_accuracy` | PGA Tour | Fairways hit % |
+| `driving_accuracy` | PGA Tour | Fairways hit % (pending implementation) |
 | ✅ `gir_pct` | PGA Tour | Greens in Regulation % |
 | ✅ `scrambling_pct` | PGA Tour | Up-and-down % from missed greens |
 | ✅ `putts_per_gir` | PGA Tour | Putts per green in regulation |
 | ✅ `birdie_avg` | PGA Tour | Birdies per round |
-| ✅ `scoring_avg` | PGA Tour | Adjusted scoring average |
+| `scoring_avg` | PGA Tour | Adjusted scoring average (scraped, not yet aggregated) |
 | ✅ `top10_pct` | Calculated | % of events finishing Top-10 (rolling) |
 | ✅ `cut_pct` | Calculated | % of cuts made (rolling) |
 | ✅ `win_pct` | Calculated | % of wins (rolling) |
@@ -45,20 +52,20 @@
 |---------|--------|-------------|
 | ✅ `course_history_avg_finish` | Historical | Past finishes at this course |
 | ✅ `course_history_sg` | Historical | SG at this specific course |
-| ✅ `course_length_fit` | Course data | How player's distance matches course length |
+| `course_length_fit` | Course data | How player's distance matches course length (planned) |
 | ✅ `course_type` | Manual tag | Links / parkland / desert / tropical |
 | ✅ `past_appearances` | Calculated | # of times played this course |
-| ✅ `bermuda_vs_bent` | Course data | Grass type putting fit |
+| `bermuda_vs_bent` | Course data | Grass type putting fit (planned) |
 
 ### D. Tournament Context Features
 
 | Feature | Source | Description |
 |---------|--------|-------------|
 | ✅ `field_strength` | OWGR | Average OWGR of field |
-| ✅ `purse_size` | Schedule | Tournament purse (motivation proxy) |
+| `purse_size` | Schedule | Tournament purse (motivation proxy) (planned) |
 | ✅ `is_major` | Flag | Major championship indicator |
 | ✅ `is_playoff_event` | Flag | FedEx Cup playoff event |
-| ✅ `tournament_round` | Leaderboard | Current round (1-4) |
+| `tournament_round` | Leaderboard | Current round (1-4) (pending scraping) |
 
 ### E. Environmental Features
 

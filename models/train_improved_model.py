@@ -129,9 +129,11 @@ def select_features(df):
         'sg_around_green_prev_season',
         'sg_putting_prev_season',
         'driving_distance_prev_season',
+        'driving_accuracy_prev_season',
         'gir_pct_prev_season',
         'scrambling_pct_prev_season',
         'birdie_avg_prev_season',
+        'scoring_avg_prev_season',
     ]
 
     # Strokes Gained — current season (slight leakage for early events; use with caution)
@@ -142,7 +144,9 @@ def select_features(df):
         'sg_around_green_season',
         'sg_putting_season',
         'driving_distance_season',
+        'driving_accuracy_season',
         'gir_pct_season',
+        'scoring_avg_season',
     ]
 
     # Weather features (Tier 3)
