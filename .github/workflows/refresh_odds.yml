@@ -1,0 +1,72 @@
+name: Refresh Tournament Odds
+
+# Odds move constantly during tournament week, so we poll RotoWire every 3 hours
+# Thursday through Sunday (the four days of a PGA Tour event).
+#
+# The pregenerate_predictions workflow owns model predictions (runs once/week).
+# This workflow is purely for keeping odds_consensus_latest.parquet fresh.
+
+on:
+  schedule:
+    # Every 3 hours on Thu (4), Fri (5), Sat (6), Sun (0)  — UTC
+    - cron: '0 */3 * * 0,4,5,6'
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: 'RotoWire event ID to fetch (leave blank for current event)'
+        required: false
+        default: ''
+      fetch_all:
+        description: 'Fetch all listed events instead of just the current one'
+        required: false
+        default: 'false'
+
+jobs:
+  refresh-odds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ── Fetch odds ───────────────────────────────────────────────────────
+      - name: Fetch odds for all listed events
+        if: ${{ github.event.inputs.fetch_all == 'true' }}
+        run: python scrapers/rotowire_odds.py --all
+        env:
+          PYTHONPATH: .
+
+      - name: Fetch odds for specific event
+        if: ${{ github.event.inputs.event_id != '' && github.event.inputs.fetch_all != 'true' }}
+        run: python scrapers/rotowire_odds.py --event ${{ github.event.inputs.event_id }}
+        env:
+          PYTHONPATH: .
+
+      - name: Fetch odds for current event (default)
+        if: ${{ github.event.inputs.event_id == '' && github.event.inputs.fetch_all != 'true' }}
+        run: python scrapers/rotowire_odds.py
+        env:
+          PYTHONPATH: .
+
+      # ── Commit updated odds files ────────────────────────────────────────
+      - name: Commit updated odds
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: refresh odds [skip ci]"
+          file_pattern: |
+            data_files/odds_consensus_latest.parquet
+            data_files/odds_consensus_latest.csv
+            data_files/odds_raw_latest.parquet
+            data_files/odds_raw_latest.csv
+            data_files/odds_history/*.parquet
+            data_files/odds_history/*.csv

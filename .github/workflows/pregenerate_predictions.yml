@@ -1,0 +1,76 @@
+name: Pre-generate Predictions Cache
+
+# Triggers:
+#  1. Automatically after the Weekly Data Pipeline succeeds (fresh features + model)
+#  2. On pushes that update model/feature files directly (e.g. manual parquet uploads)
+#  3. Manual workflow_dispatch with optional force/days_ahead overrides
+on:
+  workflow_run:
+    workflows: ["Weekly Data Pipeline"]
+    types: [completed]
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - 'models/saved_models/winner_predictor_v*.joblib'
+      - 'data_files/espn_with_extended_features.parquet'
+      - 'data_files/espn_with_owgr_features.parquet'
+      - 'data_files/espn_player_tournament_features.parquet'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force regenerate even if cache is fresh'
+        required: false
+        default: 'false'
+      days_ahead:
+        description: 'Look-ahead window in days (default: 60)'
+        required: false
+        default: '60'
+
+jobs:
+  pregenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # When triggered via workflow_run, only proceed if the upstream run succeeded
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Need full history so the auto-commit step can push
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Pre-generate predictions (forced)
+        if: ${{ github.event.inputs.force == 'true' }}
+        run: |
+          python scripts/pregenerate_predictions.py \
+            --force \
+            --days-ahead ${{ github.event.inputs.days_ahead || '60' }}
+        env:
+          PYTHONPATH: .
+
+      - name: Pre-generate predictions (incremental)
+        if: ${{ github.event.inputs.force != 'true' }}
+        run: |
+          python scripts/pregenerate_predictions.py \
+            --days-ahead ${{ github.event.inputs.days_ahead || '60' }}
+        env:
+          PYTHONPATH: .
+
+      - name: Commit updated prediction cache
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: refresh predictions cache [skip ci]"
+          file_pattern: |
+            data_files/predictions_cache/*.parquet
+            data_files/predictions_cache/manifest.json
