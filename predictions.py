@@ -317,7 +317,7 @@ st.sidebar.header("Settings")
 prediction_mode = st.sidebar.radio(
     "Prediction Mode",
     ["📊 Historical Tournaments", "🔮 Upcoming Tournaments"],
-    index=0
+    index=1  # default to upcoming events for faster load on main page
 )
 
 def get_dataframe_height(df, row_height=35, header_height=38, padding=2, max_height=600):
