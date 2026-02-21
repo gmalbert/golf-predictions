@@ -1,0 +1,77 @@
+name: Weekly Data Pipeline
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Every Monday 06:00 UTC (after weekend tournaments)
+  workflow_dispatch:        # Allow manual trigger
+
+jobs:
+  scrape-and-predict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ── Data collection ──────────────────────────────────────────────────
+      - name: Scrape ESPN tournament results
+        run: python scrapers/espn_golf.py --current-season
+        env:
+          PYTHONPATH: .
+
+      - name: Update OWGR rankings
+        run: python scrapers/owgr_rankings.py --latest
+        env:
+          PYTHONPATH: .
+        continue-on-error: true   # Don't fail pipeline if OWGR is unavailable
+
+      - name: Scrape PGA Tour stats
+        run: python scrapers/pga_tour_results.py
+        env:
+          PYTHONPATH: .
+        continue-on-error: true
+
+      # ── Feature engineering ──────────────────────────────────────────────
+      - name: Rebuild feature parquet
+        run: python features/build_features.py
+        env:
+          PYTHONPATH: .
+
+      - name: Apply player IDs
+        run: python features/apply_player_ids.py
+        env:
+          PYTHONPATH: .
+
+      # ── Predictions ──────────────────────────────────────────────────────
+      - name: Generate predictions for next tournament
+        run: python models/predict_upcoming.py --save
+        env:
+          PYTHONPATH: .
+
+      # ── Commit updated data files ────────────────────────────────────────
+      - name: Commit updated predictions
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: weekly data pipeline [skip ci]"
+          file_pattern: |
+            data_files/espn_with_extended_features.parquet
+            data_files/espn_with_owgr_features.parquet
+            models/saved_models/latest_predictions.csv
+
+      # ── Upload artifacts ─────────────────────────────────────────────────
+      - name: Upload latest predictions
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-predictions-${{ github.run_number }}
+          path: models/saved_models/latest_predictions.csv
+          retention-days: 30
