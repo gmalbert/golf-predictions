@@ -193,43 +193,95 @@ _CACHE_DIR = Path(__file__).parent / "data_files" / "predictions_cache"
 _CACHE_MAX_AGE_HOURS = 23  # treat as stale after this many hours
 
 
-def _cache_key_for(tournament_id, tournament_name: str) -> str:
-    """Mirror the slug logic in scripts/pregenerate_predictions.py."""
+def _cache_key_for(tournament_id=None, tournament_name: str = "", year: int | None = None) -> str:
+    """Return the cache filename stem for a tournament.
+
+    *Upcoming* events use the tournament_id when available.  Historical
+    predictions are keyed by slugified name plus year suffix.
+    """
     if tournament_id:
         return str(tournament_id)
     slug = _re.sub(r"[^a-z0-9]+", "_", tournament_name.lower()).strip("_")
-    return slug[:80]
+    slug = slug[:80]
+    if year is not None:
+        return f"{slug}_{year}"
+    return slug
 
 
-def load_cached_predictions(tournament_id, tournament_name: str) -> pd.DataFrame | None:
+def _save_to_cache(
+    df: pd.DataFrame,
+    key: str,
+    tournament_name: str,
+    tournament_id=None,
+    tournament_date=None,
+    year: int | None = None,
+    record_type: str = "historical",
+) -> None:
+    """Persist a predictions DataFrame to the cache and update the manifest.
+
+    *record_type* should be either ``"upcoming"`` or ``"historical``.  The
+    manifest entry stores metadata that is used by freshness checks and
+    purge logic.
     """
-    Return pre-generated predictions from the on-disk cache, or None if the
-    cache is missing or stale (older than _CACHE_MAX_AGE_HOURS).
+    from datetime import datetime, timezone
+
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    parquet_path = _CACHE_DIR / f"{key}.parquet"
+    df.to_parquet(parquet_path, index=False)
+
+    # update manifest
+    manifest = load_manifest()
+    entry: dict = {
+        "tournament_name": tournament_name,
+        "tournament_id": str(tournament_id) if tournament_id else None,
+        "tournament_date": tournament_date.isoformat()
+        if hasattr(tournament_date, "isoformat")
+        else str(tournament_date),
+        "cached_at": datetime.now(timezone.utc).isoformat(),
+        "rows": len(df),
+        "type": record_type,
+    }
+    if year is not None:
+        entry["year"] = year
+    manifest[key] = entry
+    save_manifest(manifest)
+
+
+def load_cached_predictions(tournament_id=None, tournament_name: str = "", year: int | None = None) -> pd.DataFrame | None:
+    """
+    Return pre-generated predictions from the on-disk cache.
+
+    For upcoming tournaments, pass the ESPN tournament_id.  For historical
+    events, pass the tournament_name and year.  The returned DataFrame is
+    read directly from the parquet file, or ``None`` if the cache is missing
+    or stale.
     """
     import json
     from datetime import datetime, timezone
 
-    key = _cache_key_for(tournament_id, tournament_name)
+    key = _cache_key_for(tournament_id, tournament_name, year)
     parquet_path = _CACHE_DIR / f"{key}.parquet"
 
     if not parquet_path.exists():
         return None
 
-    # Check freshness via manifest (fall back to accepting the file as-is)
+    # Check freshness only for upcoming predictions; historical caches are
+    # permanent once generated.
     manifest_path = _CACHE_DIR / "manifest.json"
     if manifest_path.exists():
         try:
             with open(manifest_path) as f:
                 manifest = json.load(f)
             entry = manifest.get(key, {})
-            cached_at_str = entry.get("cached_at", "")
-            if cached_at_str:
-                cached_at = datetime.fromisoformat(cached_at_str)
-                if cached_at.tzinfo is None:
-                    cached_at = cached_at.replace(tzinfo=timezone.utc)
-                age_h = (datetime.now(timezone.utc) - cached_at).total_seconds() / 3600
-                if age_h >= _CACHE_MAX_AGE_HOURS:
-                    return None  # stale – fall through to live computation
+            if entry.get("type") == "upcoming":
+                cached_at_str = entry.get("cached_at", "")
+                if cached_at_str:
+                    cached_at = datetime.fromisoformat(cached_at_str)
+                    if cached_at.tzinfo is None:
+                        cached_at = cached_at.replace(tzinfo=timezone.utc)
+                    age_h = (datetime.now(timezone.utc) - cached_at).total_seconds() / 3600
+                    if age_h >= _CACHE_MAX_AGE_HOURS:
+                        return None  # stale – fall through to live computation
         except Exception:
             pass  # unreadable manifest → accept cached file anyway
 
@@ -549,7 +601,15 @@ else:
         try:
             import joblib
             from models.predict_tournament import predict_field
-            
+
+            # attempt to load cached historical results first
+            cache_hit = False
+            cached = load_cached_predictions(None, tournament, selected_year)
+            if cached is not None:
+                predictions = cached
+                cache_hit = True
+                st.caption("⚡ Historical predictions loaded from cache")
+
             # Load features for selected tournament (prefer extended, then OWGR, then base)
             for fp_candidate in [
                 Path(__file__).parent / "data_files" / "espn_with_extended_features.parquet",
@@ -559,27 +619,36 @@ else:
                 if fp_candidate.exists():
                     features_path = fp_candidate
                     break
-            
-            if features_path.exists():
+
+            if not cache_hit and features_path.exists():
                 df_all = pd.read_parquet(features_path)
-                
+
                 # Filter by selected tournament and year
                 tournament_data = df_all[
                     (df_all['tournament'] == tournament) & 
                     (df_all['year'] == selected_year)
                 ]
-                
+
                 if not tournament_data.empty:
                     field = tournament_data.copy()
 
                     # Make predictions
                     predictions = predict_field(field)
 
-                    # Try to enrich with market odds
-                    predictions = enrich_predictions_with_odds(predictions, tournament)
-
-                    has_odds = "avg_novig_prob" in predictions.columns and predictions["avg_novig_prob"].notna().any()
-                    has_dk = has_odds and "dk_odds" in predictions.columns and predictions["dk_odds"].notna().any()
+                    # Persist to cache for next time
+                    try:
+                        key = _cache_key_for(None, tournament, selected_year)
+                        _save_to_cache(
+                            predictions,
+                            key,
+                            tournament_name=tournament,
+                            year=selected_year,
+                            tournament_date=None,
+                            record_type="historical",
+                        )
+                        st.caption("💾 Historical predictions written to cache")
+                    except Exception:
+                        pass
 
                     # derive top-10 probability heuristic for consistency
                     if 'win_probability' in predictions.columns:
