@@ -115,10 +115,14 @@ def select_features(df):
         'is_major',                  # Major championship flag
         'is_playoff',                # FedEx Cup playoff flag
         'purse_tier',                # Prize money tier (1-5)
+        'purse_size_m',              # Prize money in $M (continuous)
         'course_type_enc',           # Encoded course type
         'grass_type_enc',            # Encoded grass type
+        'course_yardage',            # Course length in yards
         'field_strength',            # Mean OWGR rank in field
         'field_size',                # Number of competitors
+        'course_length_fit',         # z_drive * z_yardage interaction
+        'grass_fit',                 # Historical bermuda vs bentgrass advantage
     ]
 
     # Strokes Gained — previous season (zero leakage, Tier 2)

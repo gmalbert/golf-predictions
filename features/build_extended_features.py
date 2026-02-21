@@ -96,6 +96,7 @@ def add_course_context(df: pd.DataFrame, meta: dict) -> pd.DataFrame:
         "grass_type_enc": -1,
         "lat":            np.nan,
         "lon":            np.nan,
+        "course_yardage": np.nan,
     }
 
     # Pre-compute per-tournament (avoid re-looking-up for every row)
@@ -127,8 +128,85 @@ def add_course_context(df: pd.DataFrame, meta: dict) -> pd.DataFrame:
             df[col] = rows_meta.apply(
                 lambda d: enc_map.get(d.get(raw_col, ""), -1)
             )
+        elif col == "course_yardage":
+            # JSON stores this as "yardage" — map it here
+            df[col] = rows_meta.apply(lambda d: d.get("yardage", default))
         else:
             df[col] = rows_meta.apply(lambda d: d.get(col, default))
+
+    return df
+
+
+# ── Tier 1: Purse / length / grass-fit features ─────────────────────────────
+
+# Dollar midpoint for each purse tier
+_PURSE_TIER_DOLLARS_M = {1: 3.5, 2: 6.5, 3: 10.0, 4: 16.0, 5: 25.0}
+
+
+def add_performance_fit(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add three higher-level features derived from already-computed columns:
+
+    purse_size_m
+        Dollar value (millions) implied by purse_tier.  E.g. tier 3 → $10 M.
+        Makes the feature continuous rather than ordinal.
+
+    course_length_fit
+        Interaction: how well a player's driving distance matches the course
+        length.  Computed as the product of z-scores (both centred on tour
+        averages), so positive = long hitter on a long course, negative = long
+        hitter on a short course (or short hitter on a long course).
+
+    grass_fit
+        Per-player historical advantage on bermuda grass vs. bentgrass.
+        grass_fit > 0 means the player finishes better (lower rank) on bermuda
+        than on bentgrass, based on all prior career events.
+        Computed with an expanding window — no data leakage.
+    """
+    # ── purse_size_m ────────────────────────────────────────────────────────
+    if "purse_tier" in df.columns:
+        df["purse_size_m"] = df["purse_tier"].map(_PURSE_TIER_DOLLARS_M)
+
+    # ── course_length_fit ───────────────────────────────────────────────────
+    drive_col = "driving_distance_season"
+    if "course_yardage" in df.columns and drive_col in df.columns:
+        drive_mean = df[drive_col].mean()
+        drive_std  = df[drive_col].std()
+        yard_mean  = df["course_yardage"].mean()
+        yard_std   = df["course_yardage"].std()
+
+        z_drive  = (df[drive_col] - drive_mean) / max(drive_std, 1e-9)
+        z_length = (df["course_yardage"] - yard_mean) / max(yard_std, 1e-9)
+        df["course_length_fit"] = z_drive * z_length
+    else:
+        df["course_length_fit"] = np.nan
+
+    # ── grass_fit ───────────────────────────────────────────────────────────
+    if "grass_type_enc" in df.columns and "tournament_rank" in df.columns:
+        df = df.sort_values(["name", "year", "date"]).copy()
+
+        grass_fit_vals: list[float] = []
+        for _player, grp in df.groupby("name", sort=False, dropna=False):
+            grp = grp.sort_values(["year", "date"])
+            b_sum, b_cnt = 0.0, 0   # bermuda
+            g_sum, g_cnt = 0.0, 0   # bentgrass
+            for _, row in grp.iterrows():
+                # Record fit BEFORE updating so there is no leakage
+                if b_cnt > 0 and g_cnt > 0:
+                    grass_fit_vals.append((g_sum / g_cnt) - (b_sum / b_cnt))
+                else:
+                    grass_fit_vals.append(0.0)
+                rank = row["tournament_rank"]
+                gt   = row["grass_type_enc"]
+                if pd.notna(rank) and pd.notna(gt):
+                    if int(gt) == 1:   # bermuda
+                        b_sum += rank; b_cnt += 1
+                    elif int(gt) == 0: # bentgrass
+                        g_sum += rank; g_cnt += 1
+
+        df["grass_fit"] = grass_fit_vals
+    else:
+        df["grass_fit"] = np.nan
 
     return df
 
@@ -371,11 +449,16 @@ def build_extended_features(
     df = add_course_context(df, meta)
     df = add_field_features(df)
     print(f"  ✓ is_major, is_playoff, course_type_enc, grass_type_enc, "
-          f"purse_tier, field_strength, field_size")
+          f"purse_tier, course_yardage, field_strength, field_size")
 
     # ── Tier 2 ──────────────────────────────────────────────────────────────
     print("\n[Tier 2] SG / driving stats …")
     df = add_sg_features(df)
+
+    # ── Tier 1b: performance-fit (needs SG stats for course_length_fit) ─────
+    print("\n[Tier 1b] Performance-fit features …")
+    df = add_performance_fit(df)
+    print("  ✓ purse_size_m, course_length_fit, grass_fit")
 
     # ── Tier 3 ──────────────────────────────────────────────────────────────
     if include_weather:

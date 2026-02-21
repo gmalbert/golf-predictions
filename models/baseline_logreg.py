@@ -56,9 +56,10 @@ CANDIDATE_FEATURES = [
     "owgr_points_current",
     "owgr_rank_change_4w", "owgr_rank_change_12w",
     # Extended context (not always present)
-    "is_major", "is_playoff", "purse_tier",
-    "course_type_enc", "grass_type_enc",
+    "is_major", "is_playoff", "purse_tier", "purse_size_m",
+    "course_type_enc", "grass_type_enc", "course_yardage",
     "field_strength", "field_size",
+    "course_length_fit", "grass_fit",
     # SG previous season (zero leakage)
     "sg_total_prev_season", "sg_putting_prev_season",
     "sg_approach_prev_season", "sg_off_tee_prev_season",

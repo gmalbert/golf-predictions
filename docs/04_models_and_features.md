@@ -52,20 +52,20 @@
 |---------|--------|-------------|
 | ✅ `course_history_avg_finish` | Historical | Past finishes at this course |
 | ✅ `course_history_sg` | Historical | SG at this specific course |
-| `course_length_fit` | Course data | How player's distance matches course length (planned) |
+| ✅ `course_length_fit` | Course data | z_drive × z_yardage interaction — player distance vs course length |
 | ✅ `course_type` | Manual tag | Links / parkland / desert / tropical |
 | ✅ `past_appearances` | Calculated | # of times played this course |
-| `bermuda_vs_bent` | Course data | Grass type putting fit (planned) |
+| ✅ `grass_fit` | Course data | Expanding per-player bermuda vs bentgrass advantage (was `bermuda_vs_bent`) |
 
 ### D. Tournament Context Features
 
 | Feature | Source | Description |
 |---------|--------|-------------|
 | ✅ `field_strength` | OWGR | Average OWGR of field |
-| `purse_size` | Schedule | Tournament purse (motivation proxy) (planned) |
+| ✅ `purse_size_m` | Course metadata | Tournament purse in $M (continuous, from purse_tier mapping) |
 | ✅ `is_major` | Flag | Major championship indicator |
 | ✅ `is_playoff_event` | Flag | FedEx Cup playoff event |
-| `tournament_round` | Leaderboard | Current round (1-4) (pending scraping) |
+| ~~`tournament_round`~~ | Leaderboard | Current round (1-4) — **not applicable** for pre-tournament model |
 
 ### E. Environmental Features
 

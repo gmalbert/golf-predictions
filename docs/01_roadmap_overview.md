@@ -66,7 +66,7 @@
 
 2. 🔧 **Medium priority (2–6 weeks)**
    - ✅ Implement canonical player‑ID mapping / stronger name normalization to raise SG‑join coverage — implemented (`features/player_ids.py`, `features/apply_player_ids.py`).  
-   - Add remaining features from `docs/04_models_and_features.md` (e.g. `course_length_fit`, `course_history_sg`, `momentum_score`) and corresponding tests.  
+   - ✅ Add remaining planned features from `docs/04_models_and_features.md` — `course_length_fit` (z_drive × z_yardage), `grass_fit` (bermuda vs bentgrass advantage), `purse_size_m` (continuous purse value) — all implemented in `features/build_extended_features.py` and wired into model feature lists. (`tournament_round` noted as not applicable for pre-tournament model.)  
    - Wire model **v3** into the Streamlit UI and prediction endpoints (`predictions.py`) and update user docs.  
    - ✅ RotoWire odds scraping + Streamlit odds UI (outrights, best-book, DK column, Value Bet) — implemented (`scrapers/rotowire_odds.py`, `predictions.py`).
 
