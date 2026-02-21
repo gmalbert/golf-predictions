@@ -38,11 +38,19 @@ def _tournament_slug(name: str) -> str:
     return slug[:80]
 
 
-def _cache_key(tournament_id, tournament_name: str) -> str:
-    """Return the cache filename stem for a tournament."""
+def _cache_key(tournament_id=None, tournament_name: str = "", year: int | None = None) -> str:
+    """Return the cache filename stem for a tournament.
+
+    If *tournament_id* is present we use that; otherwise we slugify the
+    tournament name and append the year if provided.  This supports
+    historical caching as well as upcoming events.
+    """
     if tournament_id:
         return str(tournament_id)
-    return _tournament_slug(tournament_name)
+    slug = _tournament_slug(tournament_name)
+    if year is not None:
+        return f"{slug}_{year}"
+    return slug
 
 
 def load_manifest() -> dict:
