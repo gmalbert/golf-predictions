@@ -7,8 +7,10 @@ Short guidance for using GitHub Copilot and for contributors working on this rep
 Quick links
 -----------
 - Repository entry point: [predictions.py](predictions.py)
-- Feature builders: [features/build_features.py](features/build_features.py)
-- Scrapers: [scrapers/espn_golf.py](scrapers/espn_golf.py)
+- Feature builders: [features/build_features.py](features/build_features.py), [features/build_owgr_features.py](features/build_owgr_features.py)
+- Models: [models/transformer_golfer.py](models/transformer_golfer.py), [models/course_embeddings.py](models/course_embeddings.py)
+- Backtesting / bankroll: [evaluation/backtester.py](evaluation/backtester.py), [betting/bankroll.py](betting/bankroll.py)
+- Live & alerts: [live/tournament_tracker.py](live/tournament_tracker.py), [monitoring/alerts.py](monitoring/alerts.py)
 - Requirements: [requirements.txt](requirements.txt)
 
 Environment setup (Windows PowerShell)
@@ -29,6 +31,24 @@ Run a quick smoke test:
 python predictions.py
 ```
 
+- Useful command‑line helpers
+---------------------------
+```powershell
+# train deep sequence model (Transformer/LSTM)
+python models/transformer_golfer.py --epochs 10
+
+# learn course embeddings and optionally cluster
+python models/course_embeddings.py --cluster
+
+# backtest historical performance + bankroll sim
+python evaluation/backtester.py --start-year 2020 --kelly 0.25
+
+# run live leaderboard tracker during an event
+python live/tournament_tracker.py --event-id 401703511
+
+# send a test Discord/email alert
+python -c "from monitoring.alerts import send_discord_alert; send_discord_alert('test')"
+```
 Editing guidelines for Copilot / contributors
 -------------------------------------------
 - Keep changes minimal and focused to solve the stated issue.

@@ -76,10 +76,18 @@ def load_and_prepare_data(feature_cols):
 
 def get_predictions(model, df, feature_cols):
     """Get model predictions for a dataset."""
-    X = df[feature_cols].copy()
-    
-    # Handle missing values
-    X = X.fillna(X.median())
+    # reindex tolerates columns that are absent in df (fills them with NaN)
+    missing_cols = [c for c in feature_cols if c not in df.columns]
+    if missing_cols:
+        import warnings
+        warnings.warn(
+            f"Feature columns missing from data, filling with 0: {missing_cols}",
+            stacklevel=2,
+        )
+    X = df.reindex(columns=feature_cols).copy()
+
+    # Handle missing values; fillna(0) catches all-NaN columns (median → NaN)
+    X = X.fillna(X.median()).fillna(0)
     
     # Convert to DMatrix
     dmatrix = xgb.DMatrix(X)

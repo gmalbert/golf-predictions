@@ -9,9 +9,9 @@
 
 ### Add PGA Tour Stats Scraping
 
-- [ ] Scrape all Strokes Gained categories (2015–present)
-- [ ] Scrape driving, approach, putting, and scrambling stats
-- [ ] Merge with existing ESPN/Wikipedia data
+- [x] Scrape all Strokes Gained categories (2015–present)
+- [x] Scrape driving, approach, putting, and scrambling stats
+- [x] Merge with existing ESPN/Wikipedia data
 
 ```python
 # scrapers/pga_stats.py (outline)
@@ -37,15 +37,15 @@ def scrape_stat(stat_id: str, season: int) -> pd.DataFrame:
 
 ### Add OWGR Integration
 
-- [ ] Weekly ranking snapshots (Selenium scraper)
-- [ ] Historical ranking at time of each tournament
-- [ ] Field strength calculation for each event
+- [x] Weekly ranking snapshots (Selenium scraper)
+- [x] Historical ranking at time of each tournament
+- [x] Field strength calculation for each event
 
 ### Add Weather Pipeline
 
-- [ ] Automate weather fetching for tournament venues
-- [ ] Map tournament dates to course coordinates
-- [ ] Store as `data_files/weather_tournament_{year}.parquet`
+- [x] Automate weather fetching for tournament venues
+- [x] Map tournament dates to course coordinates
+- [x] Store as `data_files/weather_tournament_{year}.parquet`
 
 ---
 
@@ -53,9 +53,9 @@ def scrape_stat(stat_id: str, season: int) -> pd.DataFrame:
 
 ### LightGBM Ranker Implementation
 
-- [ ] Train LambdaRank model (see `04_models_and_features.md`)
-- [ ] Optimize NDCG@5 and NDCG@10
-- [ ] Compare against XGBoost classifier
+- [x] Train LambdaRank model (see `04_models_and_features.md`)
+- [x] Optimize NDCG@5 and NDCG@10
+- [x] Compare against XGBoost classifier
 
 ### Model Stacking / Ensemble
 
@@ -167,9 +167,9 @@ def tune(df: pd.DataFrame, n_trials: int = 100):
 
 ### Odds Data Pipeline
 
-- [ ] Set up The Odds API (free tier)
-- [ ] Scrape pre-tournament odds weekly
-- [ ] Calculate implied probabilities from odds
+- [x] Set up The Odds API (free tier)  # implemented via rotowire_odds & odds_api
+- [x] Scrape pre-tournament odds weekly
+- [x] Calculate implied probabilities from odds
 
 ```python
 # odds/implied_prob.py
@@ -306,15 +306,15 @@ def plot_predictions(df: pd.DataFrame, top_n: int = 20):
 
 | Deliverable | Status |
 |-------------|--------|
-| Strokes Gained data pipeline (2015–present) | ☐ |
-| OWGR integration | ☐ |
-| Weather data pipeline | ☐ |
-| LightGBM ranker model | ☐ |
+| Strokes Gained data pipeline (2015–present) | ✅ |
+| OWGR integration | ✅ |
+| Weather data pipeline | ✅ |
+| LightGBM ranker model | ✅ |
 | Stacked ensemble model | ☐ |
 | Optuna hyperparameter tuning | ☐ |
-| Betting odds pipeline | ☐ |
-| Value bet detection system | ☐ |
-| Multi-page Streamlit app | ☐ |
+| Betting odds pipeline | ✅ |
+| Value bet detection system | ✅ |
+| Multi-page Streamlit app | ✅ |
 | Backtesting dashboard | ☐ |
 
 ---

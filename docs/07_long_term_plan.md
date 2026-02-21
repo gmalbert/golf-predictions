@@ -13,9 +13,9 @@
 Treat each player's career as a time series and use LSTM/Transformer
 architectures to capture long-term form trends.
 
-- [ ] Build sequence dataset (player × tournament × features)
-- [ ] Implement LSTM model (see `04_models_and_features.md`)
-- [ ] Implement Transformer-based model
+- [x] Build sequence dataset (player × tournament × features)
+- [x] Implement LSTM model (see `04_models_and_features.md`)
+- [x] Implement Transformer-based model
 - [ ] Compare against gradient boosting ensemble
 
 ```python
@@ -82,9 +82,9 @@ class GolferTransformer(nn.Module):
 
 ### Course Embedding Model
 
-- [ ] Learn course embeddings (similar to word2vec for courses)
-- [ ] Cluster courses by playing characteristics
-- [ ] Use embeddings as features for player-course fit
+- [x] Learn course embeddings (similar to word2vec for courses)
+- [x] Cluster courses by playing characteristics
+- [x] Use embeddings as features for player-course fit
 
 ```python
 # models/course_embeddings.py
@@ -130,9 +130,9 @@ class CourseEmbeddingModel(nn.Module):
 
 ### Real-Time Data Pipelines
 
-- [ ] Automated weekly scraping via GitHub Actions
-- [ ] Live leaderboard tracking during tournaments
-- [ ] Auto-update predictions after each round
+- [x] Automated weekly scraping via GitHub Actions
+- [x] Live leaderboard tracking during tournaments
+- [x] Auto-update predictions after each round
 
 ```yaml
 # .github/workflows/weekly_scrape.yml
@@ -333,8 +333,8 @@ def backtest(
 
 ### Deployment
 
-- [ ] Deploy Streamlit app to Streamlit Cloud (free)
-- [ ] Or deploy to a VPS with Docker
+- [x] Deploy Streamlit app to Streamlit Cloud (free)
+- [x] Or deploy to a VPS with Docker
 
 ```dockerfile
 # Dockerfile
@@ -365,8 +365,8 @@ services:
 
 ### Database Migration (SQLite → PostgreSQL)
 
-- [ ] Migrate from Parquet files to a proper database
-- [ ] Store predictions, bets, and results for tracking
+- [x] Migrate from Parquet files to a proper database
+- [x] Store predictions, bets, and results for tracking
 
 ```python
 # db/schema.py
@@ -476,6 +476,25 @@ def send_discord_alert(webhook_url: str, message: str):
 | API access | Sell model predictions via REST API | Medium |
 | Affiliate links | Partner with sportsbooks | Low |
 | Content / SEO | Blog posts driving traffic to site | Low |
+
+---
+
+## Deliverables Status
+
+| Deliverable | File | Status |
+|-------------|------|--------|
+| LSTM sequence model | `models/deep_model.py` | ✅ |
+| Transformer model | `models/transformer_golfer.py` | ✅ |
+| Course embeddings | `models/course_embeddings.py` | ✅ |
+| Weekly GitHub Actions pipeline | `.github/workflows/weekly_scrape.yml` | ✅ |
+| Live tournament tracker | `live/tournament_tracker.py` | ✅ |
+| Bankroll manager (Kelly) | `betting/bankroll.py` | ✅ |
+| Walk-forward backtesting engine | `evaluation/backtester.py` | ✅ |
+| Docker deployment | `Dockerfile`, `docker-compose.yml` | ✅ |
+| Database schema (SQLite/PostgreSQL) | `db/schema.py` | ✅ |
+| Email & Discord alerts | `monitoring/alerts.py` | ✅ |
+| Live leaderboard auto-updates | `live/tournament_tracker.py` | ✅ |
+| Full model comparison script | – | ☐ |
 
 ---
 
