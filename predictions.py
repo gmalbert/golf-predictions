@@ -650,78 +650,86 @@ else:
                     except Exception:
                         pass
 
-                    # derive top-10 probability heuristic for consistency
-                    if 'win_probability' in predictions.columns:
-                        predictions['top10_probability'] = 1 - (1 - predictions['win_probability']) ** 10
+            # enrichment and flag computation (cache_hit or new)
+            if predictions is not None and not predictions.empty:
+                # Try to enrich with market odds
+                predictions = enrich_predictions_with_odds(predictions, tournament)
 
-                    # Build display columns
-                    display_cols = ['name', 'win_probability']
-                    col_renames = {'name': 'Player', 'win_probability': 'Win Prob'}
-                    if 'top10_probability' in predictions.columns:
-                        display_cols.append('top10_probability')
-                        col_renames['top10_probability'] = 'Top-10 %'
+                has_odds = "avg_novig_prob" in predictions.columns and predictions["avg_novig_prob"].notna().any()
+                has_dk = has_odds and "dk_odds" in predictions.columns and predictions["dk_odds"].notna().any()
 
-                    if 'owgr_rank_current' in predictions.columns:
-                        display_cols.append('owgr_rank_current')
-                        col_renames['owgr_rank_current'] = 'OWGR'
+                # derive top-10 probability heuristic for consistency
+                if 'win_probability' in predictions.columns:
+                    predictions['top10_probability'] = 1 - (1 - predictions['win_probability']) ** 10
 
-                    if 'tournament_rank' in predictions.columns:
-                        display_cols.append('tournament_rank')
-                        col_renames['tournament_rank'] = 'Actual Finish'
+                # Build display columns
+                display_cols = ['name', 'win_probability']
+                col_renames = {'name': 'Player', 'win_probability': 'Win Prob'}
+                if 'top10_probability' in predictions.columns:
+                    display_cols.append('top10_probability')
+                    col_renames['top10_probability'] = 'Top-10 %'
 
-                    if has_odds:
-                        if has_dk:
-                            display_cols.append('dk_odds')
-                            col_renames['dk_odds'] = 'DK Odds'
-                        display_cols += ['best_odds', 'best_book', 'avg_novig_prob', 'Value Bet']
-                        col_renames.update({
-                            'best_odds':     'Best Odds',
-                            'best_book':     'Best Book',
-                            'avg_novig_prob': 'Mkt NoVig%',
-                        })
+                if 'owgr_rank_current' in predictions.columns:
+                    display_cols.append('owgr_rank_current')
+                    col_renames['owgr_rank_current'] = 'OWGR'
 
-                    # When odds are loaded, show full field; otherwise respect the slider
-                    if has_odds:
-                        hist_rows = predictions[[c for c in display_cols if c in predictions.columns]].copy()
-                    else:
-                        hist_rows = predictions[[c for c in display_cols if c in predictions.columns]].head(num_predictions).copy()
-                    pred_display = hist_rows.rename(columns=col_renames)
+                if 'tournament_rank' in predictions.columns:
+                    display_cols.append('tournament_rank')
+                    col_renames['tournament_rank'] = 'Actual Finish'
 
-                    # Add predicted rank (1 = top predicted winner)
-                    pred_display.insert(0, 'Rank', range(1, len(pred_display) + 1))
+                if has_odds:
+                    if has_dk:
+                        display_cols.append('dk_odds')
+                        col_renames['dk_odds'] = 'DK Odds'
+                    display_cols += ['best_odds', 'best_book', 'avg_novig_prob', 'Value Bet']
+                    col_renames.update({
+                        'best_odds':     'Best Odds',
+                        'best_book':     'Best Book',
+                        'avg_novig_prob': 'Mkt NoVig%',
+                    })
 
-                    # format probability columns
-                    if 'Top-10 %' in pred_display.columns:
-                        pred_display['Top-10 %'] = pred_display['Top-10 %'].apply(lambda x: f"{x*100:.1f}%")
-                    pred_display['Win Prob'] = pred_display['Win Prob'].apply(lambda x: f"{x:.2%}")
-                    if 'OWGR' in pred_display.columns:
-                        pred_display['OWGR'] = pred_display['OWGR'].apply(
-                            lambda x: str(int(x)) if pd.notna(x) else 'N/A'
-                        )
-                    if has_odds:
-                        def fmt_odds_hist(x):
-                            if pd.isna(x): return 'N/A'
-                            return f"+{int(x)}" if int(x) >= 0 else str(int(x))
-                        if has_dk and 'DK Odds' in pred_display.columns:
-                            pred_display['DK Odds'] = pred_display['DK Odds'].apply(fmt_odds_hist)
-                        if 'Best Odds' in pred_display.columns:
-                            pred_display['Best Odds'] = pred_display['Best Odds'].apply(fmt_odds_hist)
-                        pred_display['Mkt NoVig%'] = pred_display['Mkt NoVig%'].apply(
-                            lambda x: f"{x*100:.2f}%" if pd.notna(x) else 'N/A'
-                        )
+                # When odds are loaded, show full field; otherwise respect the slider
+                if has_odds:
+                    hist_rows = predictions[[c for c in display_cols if c in predictions.columns]].copy()
+                else:
+                    hist_rows = predictions[[c for c in display_cols if c in predictions.columns]].head(num_predictions).copy()
+                pred_display = hist_rows.rename(columns=col_renames)
 
-                    tbl_height_hist = min(len(pred_display) * 35 + 40, 2200)
-                    if 'Value Bet' in pred_display.columns:
-                        def _color_val2(val):
-                            if isinstance(val, str) and val.startswith("YES"):
-                                return 'background-color: #c6efce; color: #006100'
-                            if isinstance(val, str) and val.startswith("no"):
-                                return 'background-color: #f2dcdb; color: #9c0006'
-                            return ''
-                        st.dataframe(pred_display.style.applymap(_color_val2, subset=['Value Bet']),
-                                     hide_index=True, height=tbl_height_hist)
-                    else:
-                        st.dataframe(pred_display, hide_index=True, height=tbl_height_hist)
+                # Add predicted rank (1 = top predicted winner)
+                pred_display.insert(0, 'Rank', range(1, len(pred_display) + 1))
+
+                # format probability columns
+                if 'Top-10 %' in pred_display.columns:
+                    pred_display['Top-10 %'] = pred_display['Top-10 %'].apply(lambda x: f"{x*100:.1f}%")
+                pred_display['Win Prob'] = pred_display['Win Prob'].apply(lambda x: f"{x:.2%}")
+                if 'OWGR' in pred_display.columns:
+                    pred_display['OWGR'] = pred_display['OWGR'].apply(
+                        lambda x: str(int(x)) if pd.notna(x) else 'N/A'
+                    )
+                if has_odds:
+                    def fmt_odds_hist(x):
+                        if pd.isna(x): return 'N/A'
+                        return f"+{int(x)}" if int(x) >= 0 else str(int(x))
+                    if has_dk and 'DK Odds' in pred_display.columns:
+                        pred_display['DK Odds'] = pred_display['DK Odds'].apply(fmt_odds_hist)
+                    if 'Best Odds' in pred_display.columns:
+                        pred_display['Best Odds'] = pred_display['Best Odds'].apply(fmt_odds_hist)
+                    pred_display['Mkt NoVig%'] = pred_display['Mkt NoVig%'].apply(
+                        lambda x: f"{x*100:.2f}%" if pd.notna(x) else 'N/A'
+                    )
+
+                tbl_height_hist = min(len(pred_display) * 35 + 40, 2200)
+                if 'Value Bet' in pred_display.columns:
+                    def _color_val2(val):
+                        if isinstance(val, str) and val.startswith("YES"):
+                            return 'background-color: #c6efce; color: #006100'
+                        if isinstance(val, str) and val.startswith("no"):
+                            return 'background-color: #f2dcdb; color: #9c0006'
+                        return ''
+                    st.dataframe(pred_display.style.applymap(_color_val2, subset=['Value Bet']),
+                                 hide_index=True, height=tbl_height_hist)
+                else:
+                    st.dataframe(pred_display, hide_index=True, height=tbl_height_hist)
 
                     # ── Win probability bar chart ─────────────────────────
                     try:
@@ -760,11 +768,10 @@ else:
 
                     if 'owgr_rank_current' not in predictions.columns:
                         st.caption("OWGR features not present — run `python features/build_owgr_features.py` to add.")
-                else:
-                    st.warning(f"No historical data available for {tournament} ({selected_year})")
             else:
-                st.warning("Feature data not found. Please build features first.")
-                
+                st.warning(f"No historical data available for {tournament} ({selected_year})")
+
+
         except Exception as e:
             st.error(f"Error loading model predictions: {e}")
             st.info("Run `python models/train_improved_model.py` to train the model.")
