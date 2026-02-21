@@ -8,11 +8,14 @@ Fairway Oracle is a data-driven platform that predicts PGA Tour tournament winne
 
 ## Features
 
-- **Tournament Predictions**: Top-N winner predictions for upcoming PGA events with OWGR-enhanced accuracy
+- **Tournament Predictions**: Top‑N winner probabilities for upcoming PGA events (XGBoost ensemble with OWGR features)
 - **Player Analytics**: Strokes Gained, form trends, course history, world ranking data
-- **Value Bet Detection**: Compare model probabilities vs. market odds
-- **Historical Backtesting**: Evaluate model performance over past tournaments
-- **Live Tracking**: Update predictions during tournament rounds
+- **Value Bet Detection**: Compare model probabilities vs. market odds and flag edges
+- **Historical Backtesting & Bankroll Simulator**: Walk‑forward evaluation with AUC/top‑N metrics and fractional‑Kelly bankroll results
+- **Live Tracking**: Optionally re‑rank predictions as tournament leaderboards update
+- **Deep‑learning Sequence Models**: LSTM/Transformer training scripts for player time‑series
+- **Course Embeddings**: Learn and cluster course vectors; use as future feature inputs
+- **Alerts & Monitoring**: Email/Discord notifications for new predictions or value bets
 - **Free Data Sources**: No paid APIs required – scrapes public PGA Tour, ESPN, OWGR, and weather data
 
 ---
@@ -37,36 +40,43 @@ The app starts with placeholder data. To populate real predictions:
 
 1. **Scrape historical data:**
    ```bash
-   # Scrape ESPN tournament results (2022 season)
-   python scrapers/espn_golf.py --year 2022
-   
-   # Scrape multiple years
-   python scrapers/espn_golf.py --start 2018 --end 2024
+   python scrapers/espn_golf.py --start 2018 --end 2025
    ```
 
 2. **Build player ID mapping:**
    ```bash
-   # Creates stable player IDs from scraped data
-   python features/apply_player_ids.py
-   
-   # Validate player IDs
+   python features/apply_player_ids.py         # assign and persist stable player IDs
    python features/apply_player_ids.py --validate
    ```
 
 3. **Build features:**
    ```bash
-   python features/build_features.py
+   python features/build_features.py          # per-player tournament history
+   python features/build_owgr_features.py     # add OWGR ranking columns
+   python features/build_extended_features.py # tournament/weather/SG stats
    ```
 
-4. **Add OWGR features (optional but recommended):**
+4. **Train or experiment with models:**
    ```bash
-   # Download OWGR PDFs and build ranking features
-   python features/build_owgr_features.py
+   python models/train_improved_model.py       # XGBoost ensemble (default)
+   python models/transformer_golfer.py         # train LSTM/Transformer sequence model
+   python models/course_embeddings.py --cluster  # learn & cluster course vectors
    ```
 
-5. **Train a model:**
+5. **Evaluate & backtest:**
    ```bash
-   python models/train_improved_model.py
+   python evaluation/backtester.py --start-year 2022 --kelly 0.25
+   ```
+
+6. **Run the app / live tracking:**
+   ```bash
+   streamlit run predictions.py
+   python live/tournament_tracker.py --event-id 401703511
+   ```
+
+7. **Deploy (optional):**
+   ```bash
+   docker-compose up --build       # containerised Streamlit + scraper services
    ```
 
 See the [roadmap docs](docs/) for detailed implementation steps.

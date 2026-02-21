@@ -377,9 +377,17 @@ if is_upcoming:
                         icon="\u2139\ufe0f",
                     )
 
+            # derive additional metrics
+            if 'win_probability' in predictions.columns:
+                # approximate chance of finishing in top 10 (independence heuristic)
+                predictions['top10_probability'] = 1 - (1 - predictions['win_probability']) ** 10
+
             # Build display columns
             display_cols = ['name', 'win_probability']
             col_renames = {'name': 'Player', 'win_probability': 'Win Prob'}
+            if 'top10_probability' in predictions.columns:
+                display_cols.append('top10_probability')
+                col_renames['top10_probability'] = 'Top-10 %'
 
             if 'owgr_rank_current' in predictions.columns:
                 display_cols.append('owgr_rank_current')
@@ -403,6 +411,9 @@ if is_upcoming:
             # Add predicted rank (1 = top predicted winner, 2 = second, ...)
             pred_display.insert(0, 'Rank', range(1, len(pred_display) + 1))
 
+            # format probability columns
+            if 'Top-10 %' in pred_display.columns:
+                pred_display['Top-10 %'] = pred_display['Top-10 %'].apply(lambda x: f"{x*100:.1f}%")
             pred_display['Win Prob'] = pred_display['Win Prob'].apply(lambda x: f"{x*100:.2f}%")
             if 'OWGR' in pred_display.columns:
                 pred_display['OWGR'] = pred_display['OWGR'].apply(
@@ -422,7 +433,40 @@ if is_upcoming:
                 )
 
             tbl_height = min(len(pred_display) * 35 + 40, 2200)
-            st.dataframe(pred_display, height=tbl_height, hide_index=True)
+            # color-code value bets: green when edge positive, red when negative
+            if 'Value Bet' in pred_display.columns:
+                def _color_val(val):
+                    if isinstance(val, str) and val.startswith("YES"):
+                        return 'background-color: #c6efce; color: #006100'
+                    if isinstance(val, str) and val.startswith("no"):
+                        return 'background-color: #f2dcdb; color: #9c0006'
+                    return ''
+                st.dataframe(pred_display.style.applymap(_color_val, subset=['Value Bet']),
+                             height=tbl_height, hide_index=True)
+            else:
+                st.dataframe(pred_display, height=tbl_height, hide_index=True)
+
+            # ── Win probability bar chart ─────────────────────────────────
+            try:
+                import plotly.express as _px
+                _chart = predictions[['name', 'win_probability']].head(num_predictions).copy()
+                _chart = _chart.sort_values('win_probability')
+                _fig = _px.bar(
+                    _chart, x='win_probability', y='name', orientation='h',
+                    title=f"Win Probability – Top {num_predictions}",
+                    labels={'win_probability': 'Predicted Win %', 'name': 'Player'},
+                    color='win_probability', color_continuous_scale='Greens',
+                )
+                _fig.update_layout(
+                    height=max(300, num_predictions * 24),
+                    showlegend=False, coloraxis_showscale=False,
+                    margin=dict(l=10, r=10, t=40, b=10),
+                )
+                _fig.update_xaxes(tickformat='.1%')
+                _fig.update_yaxes(tickfont=dict(size=10))
+                st.plotly_chart(_fig, use_container_width=True)
+            except Exception:
+                pass
 
             total_field = len(predictions)
             top_n_prob = predictions['win_probability'].head(num_predictions).sum()
@@ -479,9 +523,16 @@ else:
                     has_odds = "avg_novig_prob" in predictions.columns and predictions["avg_novig_prob"].notna().any()
                     has_dk = has_odds and "dk_odds" in predictions.columns and predictions["dk_odds"].notna().any()
 
+                    # derive top-10 probability heuristic for consistency
+                    if 'win_probability' in predictions.columns:
+                        predictions['top10_probability'] = 1 - (1 - predictions['win_probability']) ** 10
+
                     # Build display columns
                     display_cols = ['name', 'win_probability']
                     col_renames = {'name': 'Player', 'win_probability': 'Win Prob'}
+                    if 'top10_probability' in predictions.columns:
+                        display_cols.append('top10_probability')
+                        col_renames['top10_probability'] = 'Top-10 %'
 
                     if 'owgr_rank_current' in predictions.columns:
                         display_cols.append('owgr_rank_current')
@@ -512,6 +563,9 @@ else:
                     # Add predicted rank (1 = top predicted winner)
                     pred_display.insert(0, 'Rank', range(1, len(pred_display) + 1))
 
+                    # format probability columns
+                    if 'Top-10 %' in pred_display.columns:
+                        pred_display['Top-10 %'] = pred_display['Top-10 %'].apply(lambda x: f"{x*100:.1f}%")
                     pred_display['Win Prob'] = pred_display['Win Prob'].apply(lambda x: f"{x:.2%}")
                     if 'OWGR' in pred_display.columns:
                         pred_display['OWGR'] = pred_display['OWGR'].apply(
@@ -530,7 +584,39 @@ else:
                         )
 
                     tbl_height_hist = min(len(pred_display) * 35 + 40, 2200)
-                    st.dataframe(pred_display, hide_index=True, height=tbl_height_hist)
+                    if 'Value Bet' in pred_display.columns:
+                        def _color_val2(val):
+                            if isinstance(val, str) and val.startswith("YES"):
+                                return 'background-color: #c6efce; color: #006100'
+                            if isinstance(val, str) and val.startswith("no"):
+                                return 'background-color: #f2dcdb; color: #9c0006'
+                            return ''
+                        st.dataframe(pred_display.style.applymap(_color_val2, subset=['Value Bet']),
+                                     hide_index=True, height=tbl_height_hist)
+                    else:
+                        st.dataframe(pred_display, hide_index=True, height=tbl_height_hist)
+
+                    # ── Win probability bar chart ─────────────────────────
+                    try:
+                        import plotly.express as _px2
+                        _chart2 = predictions[['name', 'win_probability']].head(num_predictions).copy()
+                        _chart2 = _chart2.sort_values('win_probability')
+                        _fig2 = _px2.bar(
+                            _chart2, x='win_probability', y='name', orientation='h',
+                            title=f"Win Probability – Top {num_predictions} ({tournament} {selected_year})",
+                            labels={'win_probability': 'Predicted Win %', 'name': 'Player'},
+                            color='win_probability', color_continuous_scale='Blues',
+                        )
+                        _fig2.update_layout(
+                            height=max(300, num_predictions * 24),
+                            showlegend=False, coloraxis_showscale=False,
+                            margin=dict(l=10, r=10, t=40, b=10),
+                        )
+                        _fig2.update_xaxes(tickformat='.1%')
+                        _fig2.update_yaxes(tickfont=dict(size=10))
+                        st.plotly_chart(_fig2, use_container_width=True)
+                    except Exception:
+                        pass
 
                     total_field = len(predictions)
                     if has_odds:
@@ -710,6 +796,67 @@ with st.expander("View Detailed Model Performance Metrics", expanded=False):
         st.error(f"Could not compute model quality statistics: {e}")
         st.info("Run `python models/evaluate_model_stats.py` in terminal to see full statistics.")
 
+# ── Backtesting Dashboard ───────────────────────────────────────────────────
+st.markdown("---")
+st.subheader("📊 Backtesting Dashboard")
+st.markdown("Historical accuracy: how often the actual winner appears in the model's top-N, by year.")
+
+with st.expander("View backtesting results", expanded=False):
+    try:
+        import plotly.express as _px4
+        from models.evaluate_model_stats import (
+            load_model_and_features,
+            load_and_prepare_data,
+            get_predictions as _get_preds,
+        )
+        with st.spinner("Running backtesting …"):
+            _bt_model, _bt_feats = load_model_and_features()
+            _, _val_bt, _test_bt, _ = load_and_prepare_data(_bt_feats)
+            _all_bt = pd.concat([_val_bt, _test_bt], ignore_index=True)
+
+            _bt_records = []
+            for _yr, _ydf in _all_bt.groupby("year"):
+                _proba_yr, _y_yr = _get_preds(_bt_model, _ydf, _bt_feats)
+                _ydf2 = _ydf.copy()
+                _ydf2["_p"] = _proba_yr
+                _ydf2["_w"] = _y_yr  # already a numpy array
+                for _n in [1, 3, 5, 10, 20]:
+                    _hit, _tot = 0, 0
+                    for _, _tdf in _ydf2.groupby("tournament"):
+                        if _tdf["_w"].sum() == 0:
+                            continue
+                        _top = _tdf["_p"].nlargest(_n).index
+                        _hit += int(_tdf.loc[_tdf.index.isin(_top), "_w"].sum() > 0)
+                        _tot += 1
+                    if _tot:
+                        _bt_records.append({"Year": int(_yr), "Top-N": f"Top {_n}", "Accuracy": _hit / _tot})
+
+        _bt_df = pd.DataFrame(_bt_records)
+        if not _bt_df.empty:
+            # ensure year is integer so ticks format cleanly
+            _bt_df["Year"] = _bt_df["Year"].astype(int)
+            _bt_fig = _px4.line(
+                _bt_df, x="Year", y="Accuracy", color="Top-N",
+                markers=True,
+                title="Model Top-N Accuracy by Year (Validation + Test)",
+                labels={"Accuracy": "Hit Rate"},
+            )
+            _bt_fig.update_yaxes(tickformat=".0%")
+            _bt_fig.update_xaxes(tickformat=".0f", dtick=1)
+            _bt_fig.update_layout(height=400)
+            st.plotly_chart(_bt_fig, use_container_width=True)
+
+            _bt_pivot = _bt_df.pivot(index="Year", columns="Top-N", values="Accuracy")
+            _col_order = [c for c in ["Top 1","Top 3","Top 5","Top 10","Top 20"] if c in _bt_pivot.columns]
+            st.dataframe(
+                _bt_pivot[_col_order].style.format("{:.0%}"),
+                use_container_width=True,
+            )
+        else:
+            st.info("No historical data to backtest on.")
+    except Exception as _bt_err:
+        st.error(f"Backtesting failed: {_bt_err}")
+
 # ── Upcoming Tournaments ────────────────────────────────────────────────────
 st.markdown("---")
 st.subheader("📅 Upcoming PGA Tour Events")
@@ -842,6 +989,55 @@ if features_path.exists():
 
         # Show filtered table without index
         st.dataframe(view_display.head(200), hide_index=True, height=get_dataframe_height(view_display.head(200)))
+
+        # ── Player form trend line ────────────────────────────────────────
+        if sel_player != "All" and not view.empty:
+            try:
+                import plotly.express as _px3
+                _pview = view.copy()
+                if "date" in _pview.columns:
+                    _pview["date"] = pd.to_datetime(_pview["date"], utc=True, errors="coerce")
+                if "tournament_rank" in _pview.columns and _pview["tournament_rank"].notna().any():
+                    _trend = _pview.dropna(subset=["tournament_rank"]).sort_values("date")
+                    _tfig = _px3.scatter(
+                        _trend, x="date", y="tournament_rank",
+                        hover_data=[c for c in ["tournament"] if c in _trend.columns],
+                        title=f"{sel_player} – Tournament Finish History",
+                        labels={"tournament_rank": "Finish Position", "date": "Date"},
+                    )
+                    _tfig.add_scatter(
+                        x=_trend["date"], y=_trend["tournament_rank"],
+                        mode="lines", line=dict(width=1, dash="dot", color="rgba(0,100,200,0.35)"),
+                        showlegend=False,
+                    )
+                    _tfig.update_yaxes(autorange="reversed")
+                    _tfig.update_traces(marker_size=8, selector=dict(mode="markers"))
+                    _tfig.update_layout(height=360)
+                    st.plotly_chart(_tfig, use_container_width=True)
+
+                # ── Per-course avg finish ─────────────────────────────────
+                if "tournament" in _pview.columns and "tournament_rank" in _pview.columns:
+                    _cview = (
+                        _pview.dropna(subset=["tournament", "tournament_rank"])
+                        .groupby("tournament", as_index=False)["tournament_rank"]
+                        .mean()
+                        .sort_values("tournament_rank")
+                    )
+                    if len(_cview) > 1:
+                        _cfig = _px3.bar(
+                            _cview, x="tournament", y="tournament_rank",
+                            title=f"{sel_player} – Average Finish by Course",
+                            labels={"tournament_rank": "Avg Finish", "tournament": ""},
+                            color="tournament_rank", color_continuous_scale="RdYlGn_r",
+                        )
+                        _cfig.update_yaxes(autorange="reversed")
+                        _cfig.update_layout(
+                            height=320, xaxis_tickangle=-40,
+                            showlegend=False, coloraxis_showscale=False,
+                        )
+                        st.plotly_chart(_cfig, use_container_width=True)
+            except Exception:
+                pass
 
     # Quick aggregate leaderboards (rename for display)
     st.markdown("**Quick leaderboards (all years)**")
