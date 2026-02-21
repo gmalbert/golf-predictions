@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      # Persist data and models outside the container
+      - ./data_files:/app/data_files
+      - ./models/saved_models:/app/models/saved_models
+    env_file:
+      - .env                   # ODDS_API_KEY, DISCORD_WEBHOOK_URL, etc.
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: run the weekly scrape pipeline as a separate service
+  scraper:
+    build: .
+    command: >
+      sh -c "python scrapers/espn_golf.py --current-season &&
+             python features/build_features.py &&
+             python models/predict_upcoming.py --save"
+    volumes:
+      - ./data_files:/app/data_files
+      - ./models/saved_models:/app/models/saved_models
+    env_file:
+      - .env
+    profiles:
+      - scrape          # only started with: docker compose --profile scrape up
