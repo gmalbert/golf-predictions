@@ -25,7 +25,7 @@ jobs:
 
       # ── Data collection ──────────────────────────────────────────────────
       - name: Scrape ESPN tournament results
-        run: python scrapers/espn_golf.py --current-season
+        run: python scrapers/espn_golf.py --start 2020 --end 2026
         env:
           PYTHONPATH: .
 
