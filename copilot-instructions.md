@@ -87,6 +87,7 @@ Patch & commit workflow
 -----------------------
 - Make small, atomic commits with a short description prefix: `feat:`, `fix:`, `chore:`.
 - Prefer descriptive commit bodies for non-trivial changes.
+- **Branch separation:** keep topic branches isolated; do **not** merge or rebase them into main when pushing.  Instead, use `git push origin <branch>` and open a pull request when you’re ready to merge.  This makes it easier to track independent lines of work and roll back if needed.
 
 Testing & verification
 ----------------------
