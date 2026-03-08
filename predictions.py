@@ -1205,29 +1205,20 @@ with odds_col1:
     selected_major = st.selectbox(
         "Select Major", list(MAJOR_OPTIONS.keys()), index=4
     )
-with odds_col2:
-    refresh_odds = st.button("🔄 Refresh Odds (uses 4 API credits)", type="secondary")
+#  Refresh button removed per user request
+# with odds_col2:
+#     refresh_odds = st.button("🔄 Refresh Odds (uses 4 API credits)", type="secondary")
 
 event_key = MAJOR_OPTIONS[selected_major]
 
 odds_data_path = Path(__file__).parent / "data_files" / "odds_consensus_latest.parquet"
 odds_available = odds_data_path.exists()
 
-if refresh_odds:
-    with st.spinner("Fetching latest odds from The Odds API…"):
-        try:
-            from scrapers.odds_api import fetch_all_golf_odds
-            events = None if event_key == "all" else [event_key]
-            fetch_all_golf_odds(events=events)
-            odds_available = True
-            st.success("Odds refreshed!")
-        except Exception as e:
-            st.error(f"Could not refresh odds: {e}")
+# refresh_odds logic removed; odds data must be updated via external script or automatic process
 
 if not odds_available:
     st.info(
-        "No odds data yet. Click **Refresh Odds** above or run "
-        "`python scrapers/odds_api.py` in your terminal."
+        "No odds data yet. Run `python scrapers/odds_api.py` in your terminal to fetch odds."
     )
 else:
     try:
