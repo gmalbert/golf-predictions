@@ -225,12 +225,18 @@ def _save_to_cache(
     """
     from datetime import datetime, timezone
 
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    _CACHE_DIR.mkdir(parents=True, exist_ok=True)
     parquet_path = _CACHE_DIR / f"{key}.parquet"
     df.to_parquet(parquet_path, index=False)
 
     # update manifest
-    manifest = load_manifest()
+    import json as _json
+    manifest_path = _CACHE_DIR / "manifest.json"
+    try:
+        with open(manifest_path) as _f:
+            manifest = _json.load(_f)
+    except Exception:
+        manifest = {}
     entry: dict = {
         "tournament_name": tournament_name,
         "tournament_id": str(tournament_id) if tournament_id else None,
@@ -244,7 +250,8 @@ def _save_to_cache(
     if year is not None:
         entry["year"] = year
     manifest[key] = entry
-    save_manifest(manifest)
+    with open(manifest_path, "w") as _f:
+        _json.dump(manifest, _f, indent=2)
 
 
 def load_cached_predictions(tournament_id=None, tournament_name: str = "", year: int | None = None) -> pd.DataFrame | None:
@@ -551,7 +558,9 @@ if is_upcoming:
                     if isinstance(val, str) and val.startswith("no"):
                         return 'background-color: #f2dcdb; color: #9c0006'
                     return ''
-                st.dataframe(pred_display.style.applymap(_color_val, subset=['Value Bet']),
+                _styler = pred_display.style
+                _style_fn = getattr(_styler, 'map', None) or getattr(_styler, 'applymap')
+                st.dataframe(_style_fn(_color_val, subset=['Value Bet']),
                              height=tbl_height, hide_index=True)
             else:
                 st.dataframe(pred_display, height=tbl_height, hide_index=True)
@@ -726,7 +735,9 @@ else:
                         if isinstance(val, str) and val.startswith("no"):
                             return 'background-color: #f2dcdb; color: #9c0006'
                         return ''
-                    st.dataframe(pred_display.style.applymap(_color_val2, subset=['Value Bet']),
+                    _styler2 = pred_display.style
+                    _style_fn2 = getattr(_styler2, 'map', None) or getattr(_styler2, 'applymap')
+                    st.dataframe(_style_fn2(_color_val2, subset=['Value Bet']),
                                  hide_index=True, height=tbl_height_hist)
                 else:
                     st.dataframe(pred_display, hide_index=True, height=tbl_height_hist)

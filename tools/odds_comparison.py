@@ -74,15 +74,47 @@ def load_model_predictions(event_label: str) -> pd.DataFrame:
         return df
 
 
+_EVENT_KEYWORDS: dict[str, list[str]] = {
+    "masters":   ["masters"],
+    "pga_champ": ["pga championship"],
+    "open":      ["the open", "open championship"],
+    "us_open":   ["u.s. open", "us open"],
+}
+
+
+def _name_to_event_label(name: str) -> str:
+    name_lower = (name or "").lower()
+    for label, keywords in _EVENT_KEYWORDS.items():
+        if any(kw in name_lower for kw in keywords):
+            return label
+    return "other"
+
+
+def _normalise_odds_schema(odds: pd.DataFrame) -> pd.DataFrame:
+    """Convert RotoWire schema (player_name/event_name) to legacy schema."""
+    cols = set(odds.columns)
+    if "player_name" in cols and "player" not in cols:
+        odds = odds.rename(columns={"player_name": "player"})
+    if "event_name" in cols and "event_label" not in cols:
+        odds["event_label"] = odds["event_name"].apply(_name_to_event_label)
+    if "tournament" not in odds.columns:
+        src = "event_name" if "event_name" in odds.columns else "event_label"
+        odds["tournament"] = odds[src]
+    return odds
+
+
 def load_odds(event_label: str) -> pd.DataFrame:
     path = DATA_DIR / "odds_consensus_latest.parquet"
     if not path.exists():
         raise FileNotFoundError(
             "No odds data found. Run:  python scrapers/odds_api.py"
         )
-    odds = pd.read_parquet(path)
+    odds = _normalise_odds_schema(pd.read_parquet(path))
     if event_label != "all":
-        odds = odds[odds["event_label"] == event_label]
+        filtered = odds[odds["event_label"] == event_label]
+        # Fall back to all rows when no exact event match (e.g. single-event file)
+        if not filtered.empty:
+            odds = filtered
     return odds
 
 
