@@ -19,7 +19,7 @@ import pandas as pd
 if sys.platform == 'win32':
     try:
         sys.stdout.reconfigure(encoding='utf-8')
-    except:
+    except Exception:
         pass
 
 # Add parent to path for imports
@@ -109,9 +109,9 @@ def download_latest_owgr():
                         btn.click(timeout=2000)
                         time.sleep(1)
                         break
-                    except:
+                    except Exception:
                         pass
-            except:
+            except Exception:
                 pass
             
             # Select year in dropdown
@@ -124,14 +124,14 @@ def download_latest_owgr():
                     if year_option:
                         year_option.click()
                         time.sleep(2)
-            except:
+            except Exception:
                 pass
             
             # Wait for archive items
             try:
                 page.wait_for_selector("a[href*='.pdf'], div.archivePageComponent", timeout=10000)
                 time.sleep(1)
-            except:
+            except Exception:
                 pass
             
             # Get page HTML to see structure

@@ -32,7 +32,7 @@ for endpoint in endpoints:
                     print(f"  ✓ JSON response!")
                     print(f"  Keys: {list(data.keys()) if isinstance(data, dict) else 'array'}")
                     print(f"  Preview: {str(data)[:200]}")
-                except:
+                except Exception:
                     print(f"  ⚠️  Not valid JSON")
             else:
                 print(f"  Preview: {resp.text[:200]}")

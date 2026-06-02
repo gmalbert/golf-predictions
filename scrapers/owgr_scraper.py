@@ -97,7 +97,7 @@ def fetch_owgr_archive_pdfs(year: int = 2025, headless: bool = True, download_di
                         btn.click(timeout=2000)
                         time.sleep(1)
                         break
-                    except:
+                    except Exception:
                         pass
             except Exception as e:
                 print(f"   No banner to close")
@@ -192,7 +192,7 @@ def fetch_owgr_archive_pdfs(year: int = 2025, headless: bool = True, download_di
                     try:
                         week_num = int(week_text.replace("Week", "").strip())
                         week_numbers.append((week_num, week_text))
-                    except:
+                    except Exception:
                         pass
             
             print(f"   Found {len(week_numbers)} weeks: {[w[0] for w in week_numbers]}")
