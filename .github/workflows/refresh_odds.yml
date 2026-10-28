@@ -1,15 +1,15 @@
 name: Refresh Tournament Odds
 
 # Odds move constantly during tournament week, so we poll RotoWire every 3 hours
-# Thursday through Sunday (the four days of a PGA Tour event).
+# throughout the week, including the days before a tournament starts.
 #
 # The pregenerate_predictions workflow owns model predictions (runs once/week).
-# This workflow is purely for keeping odds_consensus_latest.parquet fresh.
+# This workflow refreshes market quotes and publishes the matched grid feed.
 
 on:
   schedule:
-    # Every 3 hours on Thu (4), Fri (5), Sat (6), Sun (0)  — UTC
-    - cron: '0 */3 * * 0,4,5,6'
+    # Every 3 hours, including pre-tournament market days — UTC
+    - cron: '0 */3 * * *'
   workflow_dispatch:
     inputs:
       event_id:
@@ -20,6 +20,9 @@ on:
         description: 'Fetch all listed events instead of just the current one'
         required: false
         default: 'false'
+
+permissions:
+  contents: write
 
 jobs:
   refresh-odds:
@@ -52,19 +55,24 @@ jobs:
         env:
           PYTHONPATH: .
 
-      - name: Fetch odds for current event (default)
+      - name: Fetch all listed event odds (default)
         if: ${{ github.event.inputs.event_id == '' && github.event.inputs.fetch_all != 'true' }}
-        run: python scrapers/rotowire_odds.py
+        run: python scrapers/rotowire_odds.py --all
         env:
           PYTHONPATH: .
 
       # ── Commit updated odds files ────────────────────────────────────────
+      - name: Export current grid feed
+        run: python scripts/export_best_bets.py
+
       - name: Commit updated odds
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: refresh odds [skip ci]"
           file_pattern: |
+            data_files/best_bets_today.json
             data_files/odds_consensus_latest.parquet
+            data_files/odds_consensus_all.parquet
             data_files/odds_consensus_latest.csv
             data_files/odds_raw_latest.parquet
             data_files/odds_raw_latest.csv
