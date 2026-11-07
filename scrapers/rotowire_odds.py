@@ -264,6 +264,9 @@ def main():
 
     if all_dfs and not args.no_save:
         combined = pd.concat(all_dfs, ignore_index=True)
+        # Preserve the current-event UI file, but publish all event quotes for
+        # consumers that match prices to dated model forecasts.
+        save_consensus(combined, DATA_DIR / "odds_consensus_all.parquet")
         # Save the first/current event as the main consensus file
         save_consensus(all_dfs[0])
         print(f"\nDone. {len(all_dfs)} event(s) fetched.")

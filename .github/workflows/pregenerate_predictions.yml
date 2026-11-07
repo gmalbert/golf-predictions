@@ -27,6 +27,9 @@ on:
         required: false
         default: '60'
 
+permissions:
+  contents: write
+
 jobs:
   pregenerate:
     runs-on: ubuntu-latest
@@ -67,6 +70,9 @@ jobs:
         env:
           PYTHONPATH: .
 
+      - name: Export current grid feed
+        run: python scripts/export_best_bets.py
+
       - name: Commit updated prediction cache
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
@@ -74,3 +80,4 @@ jobs:
           file_pattern: |
             data_files/predictions_cache/*.parquet
             data_files/predictions_cache/manifest.json
+            data_files/best_bets_today.json
